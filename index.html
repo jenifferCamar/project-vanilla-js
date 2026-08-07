@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pong Blocks</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="game-container">
+
+        <header class="game-header">
+            <div>
+                <span>PONTOS</span>
+                <strong id="score">0000</strong>
+            </div>
+
+            <h1>PONG BLOCKS</h1>
+
+            <div>
+                <span>VIDAS</span>
+                <strong id="lives">♥♥♥</strong>
+            </div>
+        </header>
+
+        <section class="game-area">
+
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+            <div id="startScreen" class="game-screen">
+                <h2>PONG BLOCKS</h2>
+
+                <p>Destrua todos os blocos!</p>
+
+                <button id="startButton">
+                    INICIAR JOGO
+                </button>
+
+                <small>
+                    Use ← → ou A / D para movimentar a barra
+                </small>
+            </div>
+
+            <div id="gameOverScreen" class="game-screen hidden">
+                <h2>GAME OVER</h2>
+
+                <p>
+                    Pontuação:
+                    <strong id="finalScore">0000</strong>
+                </p>
+
+                <button id="restartButton">
+                    JOGAR NOVAMENTE
+                </button>
+            </div>
+
+            <div id="winScreen" class="game-screen hidden">
+                <h2>VOCÊ VENCEU!</h2>
+
+                <p>
+                    Pontuação:
+                    <strong id="winScore">0000</strong>
+                </p>
+
+                <button id="nextButton">
+                    JOGAR NOVAMENTE
+                </button>
+            </div>
+
+        </section>
+
+        <footer class="controls">
+            <span>← →</span>
+            <span>ou</span>
+            <span>A D</span>
+            <span>para mover</span>
+        </footer>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
