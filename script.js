@@ -218,13 +218,31 @@ function resetBall() {
 
     ball.x = canvas.width / 2;
 
-    ball.y =
-        canvas.height -
-        70;
+    ball.y = canvas.height - 70;
 
-    ball.dx = 4;
+    // Velocidade inicial
+    const speed = 5;
 
-    ball.dy = -4;
+    // Ângulo aleatório entre aproximadamente
+    // 30° e 150°
+    const angle =
+        (Math.random() * 120 + 30) *
+        (Math.PI / 180);
+
+    // Escolhe aleatoriamente para qual lado
+    // a bola começa indo
+    const direction =
+        Math.random() < 0.5 ? -1 : 1;
+
+    ball.dx =
+        Math.cos(angle) *
+        speed *
+        direction;
+
+    // Sempre começa subindo
+    ball.dy =
+        -Math.sin(angle) *
+        speed;
 }
 
 
@@ -410,7 +428,6 @@ function checkBlockCollision() {
             continue;
         }
 
-
         const collision =
             ball.x + ball.radius > block.x &&
             ball.x - ball.radius <
@@ -424,11 +441,95 @@ function checkBlockCollision() {
 
             block.destroyed = true;
 
-            ball.dy *= -1;
-
             score += 10;
 
             updateScore();
+
+
+            // Define de qual lado a bola atingiu o bloco
+
+            const previousX =
+                ball.x - ball.dx;
+
+            const previousY =
+                ball.y - ball.dy;
+
+
+            const hitFromLeft =
+                previousX + ball.radius <= block.x;
+
+            const hitFromRight =
+                previousX - ball.radius >=
+                block.x + block.width;
+
+            const hitFromTop =
+                previousY + ball.radius <= block.y;
+
+            const hitFromBottom =
+                previousY - ball.radius >=
+                block.y + block.height;
+
+
+            // Colisão lateral
+
+            if (
+                hitFromLeft ||
+                hitFromRight
+            ) {
+
+                ball.dx *= -1;
+
+            }
+
+            // Colisão vertical
+
+            else if (
+                hitFromTop ||
+                hitFromBottom
+            ) {
+
+                ball.dy *= -1;
+
+            }
+
+            // Caso não consiga determinar,
+            // muda a direção vertical
+
+            else {
+
+                ball.dy *= -1;
+            }
+
+
+            // Pequena alteração aleatória
+            // para evitar trajetórias repetitivas
+
+            ball.dx +=
+                (Math.random() - 0.5) * 0.8;
+
+
+            // Limita a velocidade horizontal
+
+            const maxHorizontalSpeed = 5.5;
+
+            if (
+                ball.dx >
+                maxHorizontalSpeed
+            ) {
+
+                ball.dx =
+                    maxHorizontalSpeed;
+            }
+
+            if (
+                ball.dx <
+                -maxHorizontalSpeed
+            ) {
+
+                ball.dx =
+                    -maxHorizontalSpeed;
+            }
+
 
             checkWin();
 
