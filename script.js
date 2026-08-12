@@ -1,3 +1,5 @@
+
+```javascript
 // ========================================
 // CANVAS
 // ========================================
@@ -31,6 +33,9 @@ const winScoreElement = document.getElementById("winScore");
 
 const player = {
     width: 120,
+    normalWidth: 120,
+    expandedWidth: 190,
+
     height: 14,
 
     x: canvas.width / 2 - 60,
@@ -43,24 +48,26 @@ const player = {
 
 
 // ========================================
-// BOLA
+// CONFIGURAÇÃO DA BOLA
 // ========================================
 
-const ball = {
-    x: canvas.width / 2,
-    y: canvas.height - 60,
-
-    radius: 8,
-
-    speed: 5,
-
-    dx: 4,
-    dy: -4
+const ballConfig = {
+    initialSpeed: 5,
+    maxSpeed: 8,
+    minimumHorizontalSpeed: 1.8,
+    maximumHorizontalSpeed: 7.2
 };
 
 
 // ========================================
-// BLOCOS
+// BOLAS
+// ========================================
+
+const balls = [];
+
+
+// ========================================
+// CONFIGURAÇÃO DOS BLOCOS
 // ========================================
 
 const blocks = [];
@@ -79,34 +86,30 @@ const blockConfig = {
 };
 
 
-function createBlocks() {
+// ========================================
+// POWER-UPS
+// ========================================
 
-    blocks.length = 0;
+const powerUps = [];
 
-    for (let row = 0; row < blockConfig.rows; row++) {
+const powerUpTypes = {
+    EXPAND: "expand",
+    MULTIBALL: "multiball",
+    SLOW: "slow"
+};
 
-        for (let column = 0; column < blockConfig.columns; column++) {
 
-            const x =
-                blockConfig.startX +
-                column * (blockConfig.width + blockConfig.gap);
+// ========================================
+// ESTADO DOS POWER-UPS
+// ========================================
 
-            const y =
-                blockConfig.startY +
-                row * (blockConfig.height + blockConfig.gap);
+const powerUpState = {
+    expandActive: false,
+    expandTimer: null,
 
-            blocks.push({
-                x: x,
-                y: y,
-
-                width: blockConfig.width,
-                height: blockConfig.height,
-
-                destroyed: false
-            });
-        }
-    }
-}
+    slowActive: false,
+    slowTimer: null
+};
 
 
 // ========================================
@@ -140,6 +143,7 @@ document.addEventListener("keydown", (event) => {
         keys.left = true;
     }
 
+
     if (
         event.key === "ArrowRight" ||
         event.key.toLowerCase() === "d"
@@ -158,6 +162,7 @@ document.addEventListener("keyup", (event) => {
         keys.left = false;
     }
 
+
     if (
         event.key === "ArrowRight" ||
         event.key.toLowerCase() === "d"
@@ -165,6 +170,208 @@ document.addEventListener("keyup", (event) => {
         keys.right = false;
     }
 });
+
+
+// ========================================
+// CRIAR BLOCOS
+// ========================================
+
+function createBlocks() {
+
+    blocks.length = 0;
+
+    for (let row = 0; row < blockConfig.rows; row++) {
+
+        for (
+            let column = 0;
+            column < blockConfig.columns;
+            column++
+        ) {
+
+            const x =
+                blockConfig.startX +
+                column *
+                (blockConfig.width + blockConfig.gap);
+
+            const y =
+                blockConfig.startY +
+                row *
+                (blockConfig.height + blockConfig.gap);
+
+
+            /*
+             * Aproximadamente 25% dos blocos
+             * terão chance de gerar um power-up.
+             */
+
+            const hasPowerUp =
+                Math.random() < 0.25;
+
+
+            let powerUpType = null;
+
+
+            if (hasPowerUp) {
+
+                const types = [
+                    powerUpTypes.EXPAND,
+                    powerUpTypes.MULTIBALL,
+                    powerUpTypes.SLOW
+                ];
+
+                powerUpType =
+                    types[
+                        Math.floor(
+                            Math.random() * types.length
+                        )
+                    ];
+            }
+
+
+            blocks.push({
+
+                x: x,
+                y: y,
+
+                width: blockConfig.width,
+                height: blockConfig.height,
+
+                destroyed: false,
+
+                powerUpType: powerUpType
+            });
+        }
+    }
+}
+
+
+// ========================================
+// CRIAR BOLA
+// ========================================
+
+function createBall(
+    x,
+    y,
+    speed = ballConfig.initialSpeed,
+    angle = null,
+    direction = null
+) {
+
+    /*
+     * Se nenhum ângulo for informado,
+     * cria uma direção aleatória.
+     */
+
+    if (angle === null) {
+
+        /*
+         * Ângulo entre 35° e 145°.
+         *
+         * Isso evita que a bola comece
+         * quase horizontal.
+         */
+
+        angle =
+            (Math.random() * 110 + 35) *
+            (Math.PI / 180);
+    }
+
+
+    if (direction === null) {
+
+        direction =
+            Math.random() < 0.5
+                ? -1
+                : 1;
+    }
+
+
+    const dx =
+        Math.cos(angle) *
+        speed *
+        direction;
+
+
+    const dy =
+        -Math.sin(angle) *
+        speed;
+
+
+    return {
+
+        x: x,
+        y: y,
+
+        radius: 8,
+
+        speed: speed,
+
+        dx: dx,
+        dy: dy,
+
+        active: true
+    };
+}
+
+
+// ========================================
+// RESETAR BOLA
+// ========================================
+
+function resetBall() {
+
+    balls.length = 0;
+
+    const ball = createBall(
+        canvas.width / 2,
+        canvas.height - 70
+    );
+
+    balls.push(ball);
+}
+
+
+// ========================================
+// RESETAR PLAYER
+// ========================================
+
+function resetPlayer() {
+
+    player.width = player.normalWidth;
+
+    player.x =
+        canvas.width / 2 -
+        player.width / 2;
+
+    player.dx = 0;
+}
+
+
+// ========================================
+// RESETAR POWER-UPS
+// ========================================
+
+function resetPowerUps() {
+
+    powerUps.length = 0;
+
+
+    clearTimeout(
+        powerUpState.expandTimer
+    );
+
+    clearTimeout(
+        powerUpState.slowTimer
+    );
+
+
+    powerUpState.expandActive = false;
+    powerUpState.slowActive = false;
+
+
+    player.width =
+        player.normalWidth;
+}
 
 
 // ========================================
@@ -176,73 +383,41 @@ function startGame() {
     score = 0;
     lives = 3;
 
+
     updateScore();
     updateLives();
 
+
     resetPlayer();
     resetBall();
+    resetPowerUps();
+
 
     createBlocks();
 
+
     gameRunning = true;
 
-    startScreen.classList.add("hidden");
-    gameOverScreen.classList.add("hidden");
-    winScreen.classList.add("hidden");
 
-    cancelAnimationFrame(animationId);
+    startScreen.classList.add(
+        "hidden"
+    );
+
+    gameOverScreen.classList.add(
+        "hidden"
+    );
+
+    winScreen.classList.add(
+        "hidden"
+    );
+
+
+    cancelAnimationFrame(
+        animationId
+    );
+
 
     gameLoop();
-}
-
-
-// ========================================
-// RESET PLAYER
-// ========================================
-
-function resetPlayer() {
-
-    player.x =
-        canvas.width / 2 -
-        player.width / 2;
-
-    player.dx = 0;
-}
-
-
-// ========================================
-// RESET BALL
-// ========================================
-
-function resetBall() {
-
-    ball.x = canvas.width / 2;
-
-    ball.y = canvas.height - 70;
-
-    // Velocidade inicial
-    const speed = 5;
-
-    // Ângulo aleatório entre aproximadamente
-    // 30° e 150°
-    const angle =
-        (Math.random() * 120 + 30) *
-        (Math.PI / 180);
-
-    // Escolhe aleatoriamente para qual lado
-    // a bola começa indo
-    const direction =
-        Math.random() < 0.5 ? -1 : 1;
-
-    ball.dx =
-        Math.cos(angle) *
-        speed *
-        direction;
-
-    // Sempre começa subindo
-    ball.dy =
-        -Math.sin(angle) *
-        speed;
 }
 
 
@@ -253,25 +428,34 @@ function resetBall() {
 function updatePlayer() {
 
     if (keys.left) {
+
         player.x -= player.speed;
     }
 
+
     if (keys.right) {
+
         player.x += player.speed;
     }
 
 
-    // Parede esquerda
+    /*
+     * Parede esquerda
+     */
 
     if (player.x < 0) {
+
         player.x = 0;
     }
 
 
-    // Parede direita
+    /*
+     * Parede direita
+     */
 
     if (
-        player.x + player.width >
+        player.x +
+        player.width >
         canvas.width
     ) {
 
@@ -283,65 +467,117 @@ function updatePlayer() {
 
 
 // ========================================
-// MOVIMENTO DA BOLA
+// MOVIMENTO DAS BOLAS
 // ========================================
 
-function updateBall() {
+function updateBalls() {
 
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+    for (const ball of balls) {
+
+        if (!ball.active) {
+            continue;
+        }
 
 
-    // Parede esquerda
+        ball.x += ball.dx;
+        ball.y += ball.dy;
 
-    if (
-        ball.x - ball.radius <= 0
-    ) {
 
-        ball.x = ball.radius;
+        /*
+         * Parede esquerda
+         */
 
-        ball.dx *= -1;
+        if (
+            ball.x -
+            ball.radius <= 0
+        ) {
+
+            ball.x =
+                ball.radius;
+
+            ball.dx =
+                Math.abs(ball.dx);
+        }
+
+
+        /*
+         * Parede direita
+         */
+
+        if (
+            ball.x +
+            ball.radius >=
+            canvas.width
+        ) {
+
+            ball.x =
+                canvas.width -
+                ball.radius;
+
+            ball.dx =
+                -Math.abs(ball.dx);
+        }
+
+
+        /*
+         * Parede superior
+         */
+
+        if (
+            ball.y -
+            ball.radius <= 0
+        ) {
+
+            ball.y =
+                ball.radius;
+
+            ball.dy =
+                Math.abs(ball.dy);
+        }
+
+
+        /*
+         * Colisão com player
+         */
+
+        checkPlayerCollision(ball);
+
+
+        /*
+         * Colisão com blocos
+         */
+
+        checkBlockCollision(ball);
     }
 
 
-    // Parede direita
+    /*
+     * Remove bolas que saíram da tela.
+     */
 
-    if (
-        ball.x + ball.radius >=
-        canvas.width
+    for (
+        let i = balls.length - 1;
+        i >= 0;
+        i--
     ) {
 
-        ball.x =
-            canvas.width -
-            ball.radius;
+        if (
+            balls[i].y -
+            balls[i].radius >
+            canvas.height
+        ) {
 
-        ball.dx *= -1;
+            balls.splice(i, 1);
+        }
     }
 
 
-    // Parede superior
+    /*
+     * Se todas as bolas caíram,
+     * perde uma vida.
+     */
 
-    if (
-        ball.y - ball.radius <= 0
-    ) {
-
-        ball.y = ball.radius;
-
-        ball.dy *= -1;
-    }
-
-
-    checkPlayerCollision();
-
-    checkBlockCollision();
-
-
-    // Bola caiu
-
-    if (
-        ball.y - ball.radius >
-        canvas.height
-    ) {
+    if (balls.length === 0) {
 
         loseLife();
     }
@@ -352,28 +588,39 @@ function updateBall() {
 // COLISÃO COM PLAYER
 // ========================================
 
-function checkPlayerCollision() {
+function checkPlayerCollision(ball) {
 
     const ballBottom =
-        ball.y + ball.radius;
+        ball.y +
+        ball.radius;
+
 
     const playerTop =
         player.y;
 
+
     const playerBottom =
-        player.y + player.height;
+        player.y +
+        player.height;
+
 
     const ballLeft =
-        ball.x - ball.radius;
+        ball.x -
+        ball.radius;
+
 
     const ballRight =
-        ball.x + ball.radius;
+        ball.x +
+        ball.radius;
+
 
     const playerLeft =
         player.x;
 
+
     const playerRight =
-        player.x + player.width;
+        player.x +
+        player.width;
 
 
     const collision =
@@ -382,6 +629,10 @@ function checkPlayerCollision() {
         ballRight >= playerLeft &&
         ballLeft <= playerRight;
 
+
+    /*
+     * Só rebate se a bola estiver descendo.
+     */
 
     if (
         collision &&
@@ -392,26 +643,173 @@ function checkPlayerCollision() {
             player.y -
             ball.radius;
 
-        ball.dy *= -1;
 
-
-        // Define o ângulo
-        // dependendo do local da barra
+        /*
+         * Posição do impacto:
+         *
+         * -1 = extrema esquerda
+         *  0 = centro
+         * +1 = extrema direita
+         */
 
         const hitPosition =
             (
                 ball.x -
-                player.x
+                (
+                    player.x +
+                    player.width / 2
+                )
             ) /
-            player.width;
+            (
+                player.width / 2
+            );
 
 
-        const angle =
-            (hitPosition - 0.5) * 2;
+        /*
+         * Limita o valor entre -1 e 1.
+         */
+
+        const normalizedHit =
+            Math.max(
+                -1,
+                Math.min(
+                    1,
+                    hitPosition
+                )
+            );
+
+
+        /*
+         * Quanto mais distante do centro,
+         * mais diagonal será a trajetória.
+         */
+
+        const maxHorizontal =
+            Math.min(
+                ball.speed * 0.95,
+                ballConfig.maximumHorizontalSpeed
+            );
 
 
         ball.dx =
-            angle * 6;
+            normalizedHit *
+            maxHorizontal;
+
+
+        /*
+         * Impede que a bola fique vertical
+         * demais quando acerta exatamente
+         * o centro da barra.
+         */
+
+        if (
+            Math.abs(ball.dx) <
+            ballConfig.minimumHorizontalSpeed
+        ) {
+
+            const direction =
+                ball.dx < 0
+                    ? -1
+                    : 1;
+
+
+            ball.dx =
+                ballConfig.minimumHorizontalSpeed *
+                direction;
+        }
+
+
+        /*
+         * Recalcula DY para manter
+         * aproximadamente a mesma velocidade.
+         */
+
+        const currentSpeed =
+            Math.sqrt(
+                ball.dx * ball.dx +
+                ball.dy * ball.dy
+            );
+
+
+        const targetSpeed =
+            ball.speed;
+
+
+        const speedRatio =
+            targetSpeed /
+            currentSpeed;
+
+
+        ball.dx *= speedRatio;
+        ball.dy *= speedRatio;
+
+
+        /*
+         * Garante que a bola volte para cima.
+         */
+
+        ball.dy =
+            -Math.abs(ball.dy);
+
+
+        /*
+         * Pequena variação aleatória.
+         */
+
+        ball.dx +=
+            (Math.random() - 0.5) *
+            0.25;
+
+
+        limitBallHorizontalSpeed(ball);
+    }
+}
+
+
+// ========================================
+// LIMITAR VELOCIDADE HORIZONTAL
+// ========================================
+
+function limitBallHorizontalSpeed(ball) {
+
+    if (
+        ball.dx >
+        ballConfig.maximumHorizontalSpeed
+    ) {
+
+        ball.dx =
+            ballConfig.maximumHorizontalSpeed;
+    }
+
+
+    if (
+        ball.dx <
+        -ballConfig.maximumHorizontalSpeed
+    ) {
+
+        ball.dx =
+            -ballConfig.maximumHorizontalSpeed;
+    }
+
+
+    /*
+     * Evita trajetória vertical demais.
+     */
+
+    if (
+        Math.abs(ball.dx) <
+        ballConfig.minimumHorizontalSpeed
+    ) {
+
+        const direction =
+            ball.dx >= 0
+                ? 1
+                : -1;
+
+
+        ball.dx =
+            ballConfig.minimumHorizontalSpeed *
+            direction;
     }
 }
 
@@ -420,7 +818,7 @@ function checkPlayerCollision() {
 // COLISÃO COM BLOCOS
 // ========================================
 
-function checkBlockCollision() {
+function checkBlockCollision(ball) {
 
     for (const block of blocks) {
 
@@ -428,114 +826,611 @@ function checkBlockCollision() {
             continue;
         }
 
+
         const collision =
-            ball.x + ball.radius > block.x &&
-            ball.x - ball.radius <
-                block.x + block.width &&
-            ball.y + ball.radius > block.y &&
-            ball.y - ball.radius <
-                block.y + block.height;
+            ball.x +
+            ball.radius >
+            block.x &&
+
+            ball.x -
+            ball.radius <
+            block.x +
+            block.width &&
+
+            ball.y +
+            ball.radius >
+            block.y &&
+
+            ball.y -
+            ball.radius <
+            block.y +
+            block.height;
+
+
+        if (!collision) {
+            continue;
+        }
+
+
+        block.destroyed = true;
+
+
+        score += 10;
+
+        updateScore();
+
+
+        /*
+         * Se o bloco possuir power-up,
+         * cria o objeto que cairá.
+         */
+
+        if (
+            block.powerUpType
+        ) {
+
+            createPowerUp(
+                block.x +
+                block.width / 2,
+
+                block.y +
+                block.height / 2,
+
+                block.powerUpType
+            );
+        }
+
+
+        /*
+         * Descobre de qual lado
+         * a bola atingiu o bloco.
+         */
+
+        const previousX =
+            ball.x -
+            ball.dx;
+
+
+        const previousY =
+            ball.y -
+            ball.dy;
+
+
+        const hitFromLeft =
+            previousX +
+            ball.radius <=
+            block.x;
+
+
+        const hitFromRight =
+            previousX -
+            ball.radius >=
+            block.x +
+            block.width;
+
+
+        const hitFromTop =
+            previousY +
+            ball.radius <=
+            block.y;
+
+
+        const hitFromBottom =
+            previousY -
+            ball.radius >=
+            block.y +
+            block.height;
+
+
+        /*
+         * Colisão horizontal
+         */
+
+        if (
+            hitFromLeft ||
+            hitFromRight
+        ) {
+
+            ball.dx *= -1;
+        }
+
+
+        /*
+         * Colisão vertical
+         */
+
+        else if (
+            hitFromTop ||
+            hitFromBottom
+        ) {
+
+            ball.dy *= -1;
+        }
+
+
+        /*
+         * Caso não consiga determinar,
+         * usa colisão vertical.
+         */
+
+        else {
+
+            ball.dy *= -1;
+        }
+
+
+        /*
+         * Pequena alteração de direção.
+         */
+
+        ball.dx +=
+            (Math.random() - 0.5) *
+            0.45;
+
+
+        limitBallHorizontalSpeed(ball);
+
+
+        /*
+         * Aumenta gradualmente
+         * a velocidade da bola.
+         */
+
+        increaseBallSpeed(ball);
+
+
+        checkWin();
+
+
+        break;
+    }
+}
+
+
+// ========================================
+// AUMENTAR VELOCIDADE DA BOLA
+// ========================================
+
+function increaseBallSpeed(ball) {
+
+    if (
+        ball.speed >=
+        ballConfig.maxSpeed
+    ) {
+        return;
+    }
+
+
+    ball.speed += 0.04;
+
+
+    if (
+        ball.speed >
+        ballConfig.maxSpeed
+    ) {
+
+        ball.speed =
+            ballConfig.maxSpeed;
+    }
+
+
+    const currentSpeed =
+        Math.sqrt(
+            ball.dx * ball.dx +
+            ball.dy * ball.dy
+        );
+
+
+    if (
+        currentSpeed === 0
+    ) {
+        return;
+    }
+
+
+    const ratio =
+        ball.speed /
+        currentSpeed;
+
+
+    ball.dx *= ratio;
+    ball.dy *= ratio;
+
+
+    limitBallHorizontalSpeed(ball);
+}
+
+
+// ========================================
+// CRIAR POWER-UP
+// ========================================
+
+function createPowerUp(
+    x,
+    y,
+    type
+) {
+
+    powerUps.push({
+
+        x: x,
+        y: y,
+
+        width: 24,
+        height: 24,
+
+        speed: 2.2,
+
+        type: type
+    });
+}
+
+
+// ========================================
+// ATUALIZAR POWER-UPS
+// ========================================
+
+function updatePowerUps() {
+
+    for (
+        let i = powerUps.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const powerUp =
+            powerUps[i];
+
+
+        powerUp.y +=
+            powerUp.speed;
+
+
+        /*
+         * Colisão com player
+         */
+
+        const collision =
+            powerUp.x +
+            powerUp.width / 2 >=
+            player.x &&
+
+            powerUp.x -
+            powerUp.width / 2 <=
+            player.x +
+            player.width &&
+
+            powerUp.y +
+            powerUp.height / 2 >=
+            player.y &&
+
+            powerUp.y -
+            powerUp.height / 2 <=
+            player.y +
+            player.height;
 
 
         if (collision) {
 
-            block.destroyed = true;
-
-            score += 10;
-
-            updateScore();
+            activatePowerUp(
+                powerUp.type
+            );
 
 
-            // Define de qual lado a bola atingiu o bloco
-
-            const previousX =
-                ball.x - ball.dx;
-
-            const previousY =
-                ball.y - ball.dy;
+            powerUps.splice(
+                i,
+                1
+            );
 
 
-            const hitFromLeft =
-                previousX + ball.radius <= block.x;
-
-            const hitFromRight =
-                previousX - ball.radius >=
-                block.x + block.width;
-
-            const hitFromTop =
-                previousY + ball.radius <= block.y;
-
-            const hitFromBottom =
-                previousY - ball.radius >=
-                block.y + block.height;
+            continue;
+        }
 
 
-            // Colisão lateral
+        /*
+         * Remove quando sair da tela.
+         */
 
-            if (
-                hitFromLeft ||
-                hitFromRight
-            ) {
+        if (
+            powerUp.y -
+            powerUp.height / 2 >
+            canvas.height
+        ) {
 
-                ball.dx *= -1;
-
-            }
-
-            // Colisão vertical
-
-            else if (
-                hitFromTop ||
-                hitFromBottom
-            ) {
-
-                ball.dy *= -1;
-
-            }
-
-            // Caso não consiga determinar,
-            // muda a direção vertical
-
-            else {
-
-                ball.dy *= -1;
-            }
-
-
-            // Pequena alteração aleatória
-            // para evitar trajetórias repetitivas
-
-            ball.dx +=
-                (Math.random() - 0.5) * 0.8;
-
-
-            // Limita a velocidade horizontal
-
-            const maxHorizontalSpeed = 5.5;
-
-            if (
-                ball.dx >
-                maxHorizontalSpeed
-            ) {
-
-                ball.dx =
-                    maxHorizontalSpeed;
-            }
-
-            if (
-                ball.dx <
-                -maxHorizontalSpeed
-            ) {
-
-                ball.dx =
-                    -maxHorizontalSpeed;
-            }
-
-
-            checkWin();
-
-            break;
+            powerUps.splice(
+                i,
+                1
+            );
         }
     }
+}
+
+
+// ========================================
+// ATIVAR POWER-UP
+// ========================================
+
+function activatePowerUp(type) {
+
+    /*
+     * Bônus de pontuação
+     */
+
+    score += 25;
+
+    updateScore();
+
+
+    // ====================================
+    // EXPAND
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.EXPAND
+    ) {
+
+        activateExpand();
+    }
+
+
+    // ====================================
+    // MULTIBALL
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.MULTIBALL
+    ) {
+
+        activateMultiball();
+    }
+
+
+    // ====================================
+    // SLOW
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.SLOW
+    ) {
+
+        activateSlow();
+    }
+}
+
+
+// ========================================
+// POWER-UP EXPAND
+// ========================================
+
+function activateExpand() {
+
+    player.width =
+        player.expandedWidth;
+
+
+    powerUpState.expandActive =
+        true;
+
+
+    clearTimeout(
+        powerUpState.expandTimer
+    );
+
+
+    powerUpState.expandTimer =
+        setTimeout(() => {
+
+            player.width =
+                player.normalWidth;
+
+
+            /*
+             * Corrige a posição caso
+             * a barra fique fora da tela.
+             */
+
+            if (
+                player.x +
+                player.width >
+                canvas.width
+            ) {
+
+                player.x =
+                    canvas.width -
+                    player.width;
+            }
+
+
+            powerUpState.expandActive =
+                false;
+
+        }, 7000);
+}
+
+
+// ========================================
+// POWER-UP MULTIBALL
+// ========================================
+
+function activateMultiball() {
+
+    /*
+     * Faz uma cópia das bolas existentes.
+     *
+     * Limitamos a 3 bolas para evitar
+     * uma quantidade exagerada.
+     */
+
+    const originalBalls =
+        [...balls];
+
+
+    for (
+        const originalBall
+        of originalBalls
+    ) {
+
+        if (
+            balls.length >= 3
+        ) {
+            break;
+        }
+
+
+        const newBall =
+            createBall(
+                originalBall.x,
+                originalBall.y,
+                originalBall.speed
+            );
+
+
+        /*
+         * Faz a nova bola partir
+         * para uma direção diferente.
+         */
+
+        newBall.dx =
+            -originalBall.dx;
+
+
+        newBall.dy =
+            originalBall.dy;
+
+
+        /*
+         * Pequena variação no ângulo.
+         */
+
+        newBall.dx +=
+            (Math.random() - 0.5) *
+            2;
+
+
+        limitBallHorizontalSpeed(
+            newBall
+        );
+
+
+        balls.push(
+            newBall
+        );
+    }
+}
+
+
+// ========================================
+// POWER-UP SLOW
+// ========================================
+
+function activateSlow() {
+
+    /*
+     * Evita ativar várias reduções
+     * simultaneamente.
+     */
+
+    powerUpState.slowActive =
+        true;
+
+
+    clearTimeout(
+        powerUpState.slowTimer
+    );
+
+
+    /*
+     * Reduz a velocidade atual
+     * das bolas.
+     */
+
+    for (
+        const ball
+        of balls
+    ) {
+
+        ball.speed *= 0.55;
+
+
+        ball.dx *= 0.55;
+        ball.dy *= 0.55;
+
+
+        /*
+         * Garante uma velocidade mínima.
+         */
+
+        if (
+            ball.speed < 2.5
+        ) {
+
+            ball.speed = 2.5;
+        }
+    }
+
+
+    powerUpState.slowTimer =
+        setTimeout(() => {
+
+            for (
+                const ball
+                of balls
+            ) {
+
+                ball.speed *=
+                    1.82;
+
+
+                if (
+                    ball.speed >
+                    ballConfig.maxSpeed
+                ) {
+
+                    ball.speed =
+                        ballConfig.maxSpeed;
+                }
+
+
+                const currentSpeed =
+                    Math.sqrt(
+                        ball.dx *
+                        ball.dx +
+                        ball.dy *
+                        ball.dy
+                    );
+
+
+                if (
+                    currentSpeed > 0
+                ) {
+
+                    const ratio =
+                        ball.speed /
+                        currentSpeed;
+
+
+                    ball.dx *=
+                        ratio;
+
+
+                    ball.dy *=
+                        ratio;
+                }
+
+
+                limitBallHorizontalSpeed(
+                    ball
+                );
+            }
+
+
+            powerUpState.slowActive =
+                false;
+
+        }, 5000);
 }
 
 
@@ -550,12 +1445,21 @@ function loseLife() {
     updateLives();
 
 
-    if (lives <= 0) {
+    if (
+        lives <= 0
+    ) {
 
         gameOver();
 
         return;
     }
+
+
+    /*
+     * Limpa power-ups da tela.
+     */
+
+    powerUps.length = 0;
 
 
     resetPlayer();
@@ -571,11 +1475,14 @@ function checkWin() {
 
     const remainingBlocks =
         blocks.some(
-            block => !block.destroyed
+            block =>
+                !block.destroyed
         );
 
 
-    if (!remainingBlocks) {
+    if (
+        !remainingBlocks
+    ) {
 
         winGame();
     }
@@ -590,8 +1497,10 @@ function gameOver() {
 
     gameRunning = false;
 
+
     finalScoreElement.textContent =
         formatScore(score);
+
 
     gameOverScreen.classList.remove(
         "hidden"
@@ -607,12 +1516,15 @@ function winGame() {
 
     gameRunning = false;
 
+
     score += 500;
 
     updateScore();
 
+
     winScoreElement.textContent =
         formatScore(score);
+
 
     winScreen.classList.remove(
         "hidden"
@@ -633,7 +1545,8 @@ function updateScore() {
 
 function formatScore(value) {
 
-    return String(value).padStart(4, "0");
+    return String(value)
+        .padStart(4, "0");
 }
 
 
@@ -654,7 +1567,9 @@ function updateLives() {
 
 function drawPlayer() {
 
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle =
+        "#ffffff";
+
 
     ctx.fillRect(
         player.x,
@@ -666,26 +1581,44 @@ function drawPlayer() {
 
 
 // ========================================
-// DESENHAR BOLA
+// DESENHAR BOLAS
 // ========================================
 
-function drawBall() {
+function drawBalls() {
 
-    ctx.beginPath();
+    for (
+        const ball
+        of balls
+    ) {
 
-    ctx.arc(
-        ball.x,
-        ball.y,
-        ball.radius,
-        0,
-        Math.PI * 2
-    );
+        if (
+            !ball.active
+        ) {
+            continue;
+        }
 
-    ctx.fillStyle = "#ffffff";
 
-    ctx.fill();
+        ctx.beginPath();
 
-    ctx.closePath();
+
+        ctx.arc(
+            ball.x,
+            ball.y,
+            ball.radius,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle =
+            "#ffffff";
+
+
+        ctx.fill();
+
+
+        ctx.closePath();
+    }
 }
 
 
@@ -695,20 +1628,240 @@ function drawBall() {
 
 function drawBlocks() {
 
-    for (const block of blocks) {
+    for (
+        const block
+        of blocks
+    ) {
 
-        if (block.destroyed) {
+        if (
+            block.destroyed
+        ) {
             continue;
         }
 
 
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle =
+            "#ffffff";
+
 
         ctx.fillRect(
             block.x,
             block.y,
             block.width,
             block.height
+        );
+
+
+        /*
+         * Indica visualmente que o bloco
+         * possui um power-up.
+         */
+
+        if (
+            block.powerUpType
+        ) {
+
+            drawPowerUpSymbol(
+                block.x +
+                block.width / 2,
+
+                block.y +
+                block.height / 2,
+
+                block.powerUpType,
+
+                true
+            );
+        }
+    }
+}
+
+
+// ========================================
+// DESENHAR POWER-UPS
+// ========================================
+
+function drawPowerUps() {
+
+    for (
+        const powerUp
+        of powerUps
+    ) {
+
+        drawPowerUpSymbol(
+            powerUp.x,
+            powerUp.y,
+            powerUp.type,
+            false
+        );
+    }
+}
+
+
+// ========================================
+// DESENHAR SÍMBOLO DO POWER-UP
+// ========================================
+
+function drawPowerUpSymbol(
+    x,
+    y,
+    type,
+    insideBlock
+) {
+
+    /*
+     * Quando está dentro do bloco,
+     * usamos preto.
+     *
+     * Quando está caindo,
+     * usamos branco.
+     */
+
+    const color =
+        insideBlock
+            ? "#000000"
+            : "#ffffff";
+
+
+    ctx.fillStyle =
+        color;
+
+
+    ctx.strokeStyle =
+        color;
+
+
+    ctx.lineWidth = 2;
+
+
+    // ====================================
+    // EXPAND
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.EXPAND
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            x - 7,
+            y
+        );
+
+        ctx.lineTo(
+            x + 7,
+            y
+        );
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            x - 7,
+            y
+        );
+
+        ctx.lineTo(
+            x - 3,
+            y - 4
+        );
+
+        ctx.moveTo(
+            x - 7,
+            y
+        );
+
+        ctx.lineTo(
+            x - 3,
+            y + 4
+        );
+
+        ctx.moveTo(
+            x + 7,
+            y
+        );
+
+        ctx.lineTo(
+            x + 3,
+            y - 4
+        );
+
+        ctx.moveTo(
+            x + 7,
+            y
+        );
+
+        ctx.lineTo(
+            x + 3,
+            y + 4
+        );
+
+        ctx.stroke();
+
+        return;
+    }
+
+
+    // ====================================
+    // MULTIBALL
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.MULTIBALL
+    ) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x - 5,
+            y,
+            3,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.arc(
+            x + 5,
+            y,
+            3,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+
+        return;
+    }
+
+
+    // ====================================
+    // SLOW
+    // ====================================
+
+    if (
+        type ===
+        powerUpTypes.SLOW
+    ) {
+
+        ctx.font =
+            "bold 14px Arial";
+
+        ctx.textAlign =
+            "center";
+
+        ctx.textBaseline =
+            "middle";
+
+
+        ctx.fillText(
+            "S",
+            x,
+            y
         );
     }
 }
@@ -720,7 +1873,9 @@ function drawBlocks() {
 
 function drawBackground() {
 
-    ctx.fillStyle = "#050505";
+    ctx.fillStyle =
+        "#050505";
+
 
     ctx.fillRect(
         0,
@@ -737,7 +1892,10 @@ function drawBackground() {
 
 function gameLoop() {
 
-    if (!gameRunning) {
+    if (
+        !gameRunning
+    ) {
+
         return;
     }
 
@@ -748,7 +1906,9 @@ function gameLoop() {
 
 
     animationId =
-        requestAnimationFrame(gameLoop);
+        requestAnimationFrame(
+            gameLoop
+        );
 }
 
 
@@ -760,7 +1920,9 @@ function update() {
 
     updatePlayer();
 
-    updateBall();
+    updateBalls();
+
+    updatePowerUps();
 }
 
 
@@ -774,9 +1936,11 @@ function draw() {
 
     drawBlocks();
 
+    drawPowerUps();
+
     drawPlayer();
 
-    drawBall();
+    drawBalls();
 }
 
 
@@ -789,10 +1953,12 @@ startButton.addEventListener(
     startGame
 );
 
+
 restartButton.addEventListener(
     "click",
     startGame
 );
+
 
 nextButton.addEventListener(
     "click",
@@ -807,3 +1973,4 @@ nextButton.addEventListener(
 createBlocks();
 
 draw();
+```
