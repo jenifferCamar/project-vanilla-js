@@ -1,705 +1,888 @@
+document.addEventListener("DOMContentLoaded", () => {
 
-```javascript
-// ========================================
-// CANVAS
-// ========================================
+    // ========================================
+    // CANVAS
+    // ========================================
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-
-// ========================================
-// ELEMENTOS HTML
-// ========================================
-
-const scoreElement = document.getElementById("score");
-const livesElement = document.getElementById("lives");
-
-const startScreen = document.getElementById("startScreen");
-const gameOverScreen = document.getElementById("gameOverScreen");
-const winScreen = document.getElementById("winScreen");
-
-const startButton = document.getElementById("startButton");
-const restartButton = document.getElementById("restartButton");
-const nextButton = document.getElementById("nextButton");
-
-const finalScoreElement = document.getElementById("finalScore");
-const winScoreElement = document.getElementById("winScore");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
 
-// ========================================
-// JOGADOR
-// ========================================
+    // ========================================
+    // ELEMENTOS HTML
+    // ========================================
 
-const player = {
-    width: 120,
-    normalWidth: 120,
-    expandedWidth: 190,
+    const scoreElement = document.getElementById("score");
+    const livesElement = document.getElementById("lives");
 
-    height: 14,
+    const startScreen = document.getElementById("startScreen");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const winScreen = document.getElementById("winScreen");
 
-    x: canvas.width / 2 - 60,
-    y: canvas.height - 35,
+    const startButton = document.getElementById("startButton");
+    const restartButton = document.getElementById("restartButton");
+    const nextButton = document.getElementById("nextButton");
 
-    speed: 7,
-
-    dx: 0
-};
-
-
-// ========================================
-// CONFIGURAÇÃO DA BOLA
-// ========================================
-
-const ballConfig = {
-    initialSpeed: 5,
-    maxSpeed: 8,
-    minimumHorizontalSpeed: 1.8,
-    maximumHorizontalSpeed: 7.2
-};
+    const finalScoreElement = document.getElementById("finalScore");
+    const winScoreElement = document.getElementById("winScore");
 
 
-// ========================================
-// BOLAS
-// ========================================
+    // ========================================
+    // VERIFICAÇÃO DOS ELEMENTOS
+    // ========================================
 
-const balls = [];
+    if (!canvas) {
+        console.error("Canvas não encontrado.");
+        return;
+    }
 
-
-// ========================================
-// CONFIGURAÇÃO DOS BLOCOS
-// ========================================
-
-const blocks = [];
-
-const blockConfig = {
-    rows: 4,
-    columns: 8,
-
-    width: 82,
-    height: 25,
-
-    gap: 8,
-
-    startX: 26,
-    startY: 40
-};
-
-
-// ========================================
-// POWER-UPS
-// ========================================
-
-const powerUps = [];
-
-const powerUpTypes = {
-    EXPAND: "expand",
-    MULTIBALL: "multiball",
-    SLOW: "slow"
-};
-
-
-// ========================================
-// ESTADO DOS POWER-UPS
-// ========================================
-
-const powerUpState = {
-    expandActive: false,
-    expandTimer: null,
-
-    slowActive: false,
-    slowTimer: null
-};
-
-
-// ========================================
-// JOGO
-// ========================================
-
-let score = 0;
-let lives = 3;
-
-let gameRunning = false;
-
-let animationId;
-
-
-// ========================================
-// TECLADO
-// ========================================
-
-const keys = {
-    left: false,
-    right: false
-};
-
-
-document.addEventListener("keydown", (event) => {
-
-    if (
-        event.key === "ArrowLeft" ||
-        event.key.toLowerCase() === "a"
-    ) {
-        keys.left = true;
+    if (!startButton) {
+        console.error("Botão de início não encontrado.");
+        return;
     }
 
 
-    if (
-        event.key === "ArrowRight" ||
-        event.key.toLowerCase() === "d"
-    ) {
-        keys.right = true;
-    }
-});
+    // ========================================
+    // PLAYER
+    // ========================================
+
+    const player = {
+
+        width: 120,
+        normalWidth: 120,
+        expandedWidth: 190,
+
+        height: 14,
+
+        x: canvas.width / 2 - 60,
+        y: canvas.height - 35,
+
+        speed: 7
+    };
 
 
-document.addEventListener("keyup", (event) => {
+    // ========================================
+    // CONFIGURAÇÃO DA BOLA
+    // ========================================
 
-    if (
-        event.key === "ArrowLeft" ||
-        event.key.toLowerCase() === "a"
-    ) {
-        keys.left = false;
-    }
+    const ballConfig = {
 
+        initialSpeed: 5,
 
-    if (
-        event.key === "ArrowRight" ||
-        event.key.toLowerCase() === "d"
-    ) {
-        keys.right = false;
-    }
-});
+        maxSpeed: 8,
+
+        minimumHorizontalSpeed: 1.8,
+
+        maximumHorizontalSpeed: 7
+    };
 
 
-// ========================================
-// CRIAR BLOCOS
-// ========================================
+    // ========================================
+    // BOLAS
+    // ========================================
 
-function createBlocks() {
+    let balls = [];
 
-    blocks.length = 0;
 
-    for (let row = 0; row < blockConfig.rows; row++) {
+    // ========================================
+    // BLOCOS
+    // ========================================
 
-        for (
-            let column = 0;
-            column < blockConfig.columns;
-            column++
+    let blocks = [];
+
+
+    const blockConfig = {
+
+        rows: 4,
+
+        columns: 8,
+
+        width: 82,
+
+        height: 25,
+
+        gap: 8,
+
+        startX: 26,
+
+        startY: 40
+    };
+
+
+    // ========================================
+    // POWER-UPS
+    // ========================================
+
+    let powerUps = [];
+
+
+    const POWER_UP = {
+
+        EXPAND: "expand",
+
+        MULTIBALL: "multiball",
+
+        SLOW: "slow"
+    };
+
+
+    // ========================================
+    // ESTADO DOS POWER-UPS
+    // ========================================
+
+    let expandTimeout = null;
+
+    let slowTimeout = null;
+
+
+    // ========================================
+    // ESTADO DO JOGO
+    // ========================================
+
+    let score = 0;
+
+    let lives = 3;
+
+    let gameRunning = false;
+
+    let animationId = null;
+
+
+    // ========================================
+    // TECLADO
+    // ========================================
+
+    const keys = {
+
+        left: false,
+
+        right: false
+    };
+
+
+    // ========================================
+    // TECLADO - PRESSIONAR
+    // ========================================
+
+    document.addEventListener("keydown", (event) => {
+
+        const key = event.key.toLowerCase();
+
+
+        if (
+            key === "arrowleft" ||
+            key === "a"
         ) {
 
-            const x =
-                blockConfig.startX +
-                column *
-                (blockConfig.width + blockConfig.gap);
+            keys.left = true;
 
-            const y =
-                blockConfig.startY +
-                row *
-                (blockConfig.height + blockConfig.gap);
+            event.preventDefault();
+        }
 
 
-            /*
-             * Aproximadamente 25% dos blocos
-             * terão chance de gerar um power-up.
-             */
+        if (
+            key === "arrowright" ||
+            key === "d"
+        ) {
 
-            const hasPowerUp =
-                Math.random() < 0.25;
+            keys.right = true;
+
+            event.preventDefault();
+        }
+    });
 
 
-            let powerUpType = null;
+    // ========================================
+    // TECLADO - SOLTAR
+    // ========================================
+
+    document.addEventListener("keyup", (event) => {
+
+        const key = event.key.toLowerCase();
 
 
-            if (hasPowerUp) {
+        if (
+            key === "arrowleft" ||
+            key === "a"
+        ) {
 
-                const types = [
-                    powerUpTypes.EXPAND,
-                    powerUpTypes.MULTIBALL,
-                    powerUpTypes.SLOW
-                ];
+            keys.left = false;
 
-                powerUpType =
-                    types[
-                        Math.floor(
-                            Math.random() * types.length
-                        )
+            event.preventDefault();
+        }
+
+
+        if (
+            key === "arrowright" ||
+            key === "d"
+        ) {
+
+            keys.right = false;
+
+            event.preventDefault();
+        }
+    });
+
+
+    // ========================================
+    // CRIAR BLOCOS
+    // ========================================
+
+    function createBlocks() {
+
+        blocks = [];
+
+
+        for (
+            let row = 0;
+            row < blockConfig.rows;
+            row++
+        ) {
+
+            for (
+                let column = 0;
+                column < blockConfig.columns;
+                column++
+            ) {
+
+                const x =
+                    blockConfig.startX +
+                    column *
+                    (
+                        blockConfig.width +
+                        blockConfig.gap
+                    );
+
+
+                const y =
+                    blockConfig.startY +
+                    row *
+                    (
+                        blockConfig.height +
+                        blockConfig.gap
+                    );
+
+
+                /*
+                 * Aproximadamente 25%
+                 * dos blocos possuem poder.
+                 */
+
+                let powerUpType = null;
+
+
+                if (Math.random() < 0.15) {
+
+                    const types = [
+
+                        POWER_UP.EXPAND,
+
+                        POWER_UP.MULTIBALL,
+
+                        POWER_UP.SLOW
                     ];
+
+
+                    powerUpType =
+                        types[
+                            Math.floor(
+                                Math.random() *
+                                types.length
+                            )
+                        ];
+                }
+
+
+                blocks.push({
+
+                    x,
+
+                    y,
+
+                    width:
+                        blockConfig.width,
+
+                    height:
+                        blockConfig.height,
+
+                    destroyed: false,
+
+                    powerUpType
+                });
             }
-
-
-            blocks.push({
-
-                x: x,
-                y: y,
-
-                width: blockConfig.width,
-                height: blockConfig.height,
-
-                destroyed: false,
-
-                powerUpType: powerUpType
-            });
         }
     }
-}
 
 
-// ========================================
-// CRIAR BOLA
-// ========================================
+    // ========================================
+    // CRIAR BOLA
+    // ========================================
 
-function createBall(
-    x,
-    y,
-    speed = ballConfig.initialSpeed,
-    angle = null,
-    direction = null
-) {
-
-    /*
-     * Se nenhum ângulo for informado,
-     * cria uma direção aleatória.
-     */
-
-    if (angle === null) {
+    function createBall(
+        x,
+        y,
+        speed = ballConfig.initialSpeed
+    ) {
 
         /*
          * Ângulo entre 35° e 145°.
          *
-         * Isso evita que a bola comece
-         * quase horizontal.
+         * Isso impede que a bola
+         * comece quase horizontal.
          */
 
-        angle =
-            (Math.random() * 110 + 35) *
-            (Math.PI / 180);
-    }
+        const angle =
+            (
+                Math.random() *
+                110 +
+                35
+            ) *
+            (
+                Math.PI / 180
+            );
 
 
-    if (direction === null) {
-
-        direction =
+        const direction =
             Math.random() < 0.5
                 ? -1
                 : 1;
+
+
+        return {
+
+            x,
+
+            y,
+
+            radius: 8,
+
+            speed,
+
+            dx:
+                Math.cos(angle) *
+                speed *
+                direction,
+
+            dy:
+                -Math.sin(angle) *
+                speed
+        };
     }
 
 
-    const dx =
-        Math.cos(angle) *
-        speed *
-        direction;
+    // ========================================
+    // RESETAR BOLA
+    // ========================================
+
+    function resetBall() {
+
+        balls = [];
 
 
-    const dy =
-        -Math.sin(angle) *
-        speed;
+        const ball =
+            createBall(
+                canvas.width / 2,
+
+                canvas.height - 70
+            );
 
 
-    return {
-
-        x: x,
-        y: y,
-
-        radius: 8,
-
-        speed: speed,
-
-        dx: dx,
-        dy: dy,
-
-        active: true
-    };
-}
-
-
-// ========================================
-// RESETAR BOLA
-// ========================================
-
-function resetBall() {
-
-    balls.length = 0;
-
-    const ball = createBall(
-        canvas.width / 2,
-        canvas.height - 70
-    );
-
-    balls.push(ball);
-}
-
-
-// ========================================
-// RESETAR PLAYER
-// ========================================
-
-function resetPlayer() {
-
-    player.width = player.normalWidth;
-
-    player.x =
-        canvas.width / 2 -
-        player.width / 2;
-
-    player.dx = 0;
-}
-
-
-// ========================================
-// RESETAR POWER-UPS
-// ========================================
-
-function resetPowerUps() {
-
-    powerUps.length = 0;
-
-
-    clearTimeout(
-        powerUpState.expandTimer
-    );
-
-    clearTimeout(
-        powerUpState.slowTimer
-    );
-
-
-    powerUpState.expandActive = false;
-    powerUpState.slowActive = false;
-
-
-    player.width =
-        player.normalWidth;
-}
-
-
-// ========================================
-// INICIAR JOGO
-// ========================================
-
-function startGame() {
-
-    score = 0;
-    lives = 3;
-
-
-    updateScore();
-    updateLives();
-
-
-    resetPlayer();
-    resetBall();
-    resetPowerUps();
-
-
-    createBlocks();
-
-
-    gameRunning = true;
-
-
-    startScreen.classList.add(
-        "hidden"
-    );
-
-    gameOverScreen.classList.add(
-        "hidden"
-    );
-
-    winScreen.classList.add(
-        "hidden"
-    );
-
-
-    cancelAnimationFrame(
-        animationId
-    );
-
-
-    gameLoop();
-}
-
-
-// ========================================
-// MOVIMENTO DO PLAYER
-// ========================================
-
-function updatePlayer() {
-
-    if (keys.left) {
-
-        player.x -= player.speed;
+        balls.push(ball);
     }
 
 
-    if (keys.right) {
+    // ========================================
+    // RESETAR PLAYER
+    // ========================================
 
-        player.x += player.speed;
-    }
+    function resetPlayer() {
 
+        player.width =
+            player.normalWidth;
 
-    /*
-     * Parede esquerda
-     */
-
-    if (player.x < 0) {
-
-        player.x = 0;
-    }
-
-
-    /*
-     * Parede direita
-     */
-
-    if (
-        player.x +
-        player.width >
-        canvas.width
-    ) {
 
         player.x =
-            canvas.width -
-            player.width;
+            canvas.width / 2 -
+            player.width / 2;
     }
-}
 
 
-// ========================================
-// MOVIMENTO DAS BOLAS
-// ========================================
+    // ========================================
+    // RESETAR POWER-UPS
+    // ========================================
 
-function updateBalls() {
+    function resetPowerUps() {
 
-    for (const ball of balls) {
-
-        if (!ball.active) {
-            continue;
-        }
+        powerUps = [];
 
 
-        ball.x += ball.dx;
-        ball.y += ball.dy;
+        clearTimeout(
+            expandTimeout
+        );
+
+
+        clearTimeout(
+            slowTimeout
+        );
+
+
+        player.width =
+            player.normalWidth;
+    }
+
+
+    // ========================================
+    // INICIAR JOGO
+    // ========================================
+
+    function startGame() {
+
+        console.log(
+            "Pong Blocks iniciado!"
+        );
 
 
         /*
-         * Parede esquerda
+         * Para uma possível partida
+         * anterior.
          */
 
-        if (
-            ball.x -
-            ball.radius <= 0
-        ) {
+        cancelAnimationFrame(
+            animationId
+        );
 
-            ball.x =
-                ball.radius;
 
-            ball.dx =
-                Math.abs(ball.dx);
+        score = 0;
+
+        lives = 3;
+
+
+        updateScore();
+
+        updateLives();
+
+
+        resetPlayer();
+
+        resetBall();
+
+        resetPowerUps();
+
+        createBlocks();
+
+
+        /*
+         * Esconde todas as telas.
+         */
+
+        startScreen.classList.add(
+            "hidden"
+        );
+
+
+        gameOverScreen.classList.add(
+            "hidden"
+        );
+
+
+        winScreen.classList.add(
+            "hidden"
+        );
+
+
+        gameRunning = true;
+
+
+        /*
+         * Começa o loop.
+         */
+
+        gameLoop();
+    }
+
+
+    // ========================================
+    // MOVIMENTO DO PLAYER
+    // ========================================
+
+    function updatePlayer() {
+
+        if (keys.left) {
+
+            player.x -=
+                player.speed;
+        }
+
+
+        if (keys.right) {
+
+            player.x +=
+                player.speed;
         }
 
 
         /*
-         * Parede direita
+         * Limite esquerdo.
+         */
+
+        if (player.x < 0) {
+
+            player.x = 0;
+        }
+
+
+        /*
+         * Limite direito.
          */
 
         if (
-            ball.x +
-            ball.radius >=
+            player.x +
+            player.width >
             canvas.width
         ) {
 
-            ball.x =
+            player.x =
                 canvas.width -
-                ball.radius;
+                player.width;
+        }
+    }
 
-            ball.dx =
-                -Math.abs(ball.dx);
+
+    // ========================================
+    // MOVIMENTO DAS BOLAS
+    // ========================================
+
+    function updateBalls() {
+
+        /*
+         * Atualiza todas as bolas.
+         */
+
+        for (const ball of balls) {
+
+            ball.x += ball.dx;
+
+            ball.y += ball.dy;
+
+
+            // -------------------------------
+            // PAREDE ESQUERDA
+            // -------------------------------
+
+            if (
+                ball.x -
+                ball.radius <= 0
+            ) {
+
+                ball.x =
+                    ball.radius;
+
+                ball.dx =
+                    Math.abs(
+                        ball.dx
+                    );
+            }
+
+
+            // -------------------------------
+            // PAREDE DIREITA
+            // -------------------------------
+
+            if (
+                ball.x +
+                ball.radius >=
+                canvas.width
+            ) {
+
+                ball.x =
+                    canvas.width -
+                    ball.radius;
+
+                ball.dx =
+                    -Math.abs(
+                        ball.dx
+                    );
+            }
+
+
+            // -------------------------------
+            // PAREDE SUPERIOR
+            // -------------------------------
+
+            if (
+                ball.y -
+                ball.radius <= 0
+            ) {
+
+                ball.y =
+                    ball.radius;
+
+                ball.dy =
+                    Math.abs(
+                        ball.dy
+                    );
+            }
+
+
+            // -------------------------------
+            // PLAYER
+            // -------------------------------
+
+            checkPlayerCollision(
+                ball
+            );
+
+
+            // -------------------------------
+            // BLOCOS
+            // -------------------------------
+
+            checkBlockCollision(
+                ball
+            );
         }
 
 
         /*
-         * Parede superior
+         * Remove bolas que saíram
+         * pela parte inferior.
+         */
+
+        balls =
+            balls.filter(
+                ball =>
+                    ball.y -
+                    ball.radius <=
+                    canvas.height
+            );
+
+
+        /*
+         * Se nenhuma bola restou,
+         * perde uma vida.
          */
 
         if (
-            ball.y -
-            ball.radius <= 0
+            balls.length === 0
         ) {
 
-            ball.y =
-                ball.radius;
-
-            ball.dy =
-                Math.abs(ball.dy);
-        }
-
-
-        /*
-         * Colisão com player
-         */
-
-        checkPlayerCollision(ball);
-
-
-        /*
-         * Colisão com blocos
-         */
-
-        checkBlockCollision(ball);
-    }
-
-
-    /*
-     * Remove bolas que saíram da tela.
-     */
-
-    for (
-        let i = balls.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        if (
-            balls[i].y -
-            balls[i].radius >
-            canvas.height
-        ) {
-
-            balls.splice(i, 1);
+            loseLife();
         }
     }
 
 
-    /*
-     * Se todas as bolas caíram,
-     * perde uma vida.
-     */
+    // ========================================
+    // COLISÃO PLAYER
+    // ========================================
 
-    if (balls.length === 0) {
-
-        loseLife();
-    }
-}
-
-
-// ========================================
-// COLISÃO COM PLAYER
-// ========================================
-
-function checkPlayerCollision(ball) {
-
-    const ballBottom =
-        ball.y +
-        ball.radius;
-
-
-    const playerTop =
-        player.y;
-
-
-    const playerBottom =
-        player.y +
-        player.height;
-
-
-    const ballLeft =
-        ball.x -
-        ball.radius;
-
-
-    const ballRight =
-        ball.x +
-        ball.radius;
-
-
-    const playerLeft =
-        player.x;
-
-
-    const playerRight =
-        player.x +
-        player.width;
-
-
-    const collision =
-        ballBottom >= playerTop &&
-        ball.y <= playerBottom &&
-        ballRight >= playerLeft &&
-        ballLeft <= playerRight;
-
-
-    /*
-     * Só rebate se a bola estiver descendo.
-     */
-
-    if (
-        collision &&
-        ball.dy > 0
+    function checkPlayerCollision(
+        ball
     ) {
 
-        ball.y =
-            player.y -
+        const ballBottom =
+            ball.y +
             ball.radius;
 
 
+        const ballLeft =
+            ball.x -
+            ball.radius;
+
+
+        const ballRight =
+            ball.x +
+            ball.radius;
+
+
+        const collision =
+
+            ballBottom >=
+            player.y &&
+
+            ball.y <=
+            player.y +
+            player.height &&
+
+            ballRight >=
+            player.x &&
+
+            ballLeft <=
+            player.x +
+            player.width;
+
+
         /*
-         * Posição do impacto:
-         *
-         * -1 = extrema esquerda
-         *  0 = centro
-         * +1 = extrema direita
+         * Só rebate quando a bola
+         * está descendo.
          */
 
-        const hitPosition =
-            (
-                ball.x -
+        if (
+            collision &&
+            ball.dy > 0
+        ) {
+
+            ball.y =
+                player.y -
+                ball.radius;
+
+
+            /*
+             * Descobre onde a bola
+             * bateu na barra.
+             *
+             * -1 = esquerda
+             *  0 = centro
+             * +1 = direita
+             */
+
+            let hitPosition =
                 (
-                    player.x +
+                    ball.x -
+                    (
+                        player.x +
+                        player.width / 2
+                    )
+                ) /
+                (
                     player.width / 2
-                )
-            ) /
-            (
-                player.width / 2
-            );
+                );
 
 
-        /*
-         * Limita o valor entre -1 e 1.
-         */
+            /*
+             * Mantém entre -1 e 1.
+             */
 
-        const normalizedHit =
-            Math.max(
-                -1,
+            hitPosition =
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        hitPosition
+                    )
+                );
+
+
+            /*
+             * Velocidade horizontal
+             * baseada na posição.
+             */
+
+            const maxHorizontal =
                 Math.min(
-                    1,
-                    hitPosition
-                )
+                    ball.speed * 0.95,
+                    ballConfig.maximumHorizontalSpeed
+                );
+
+
+            ball.dx =
+                hitPosition *
+                maxHorizontal;
+
+
+            /*
+             * Impede que a bola
+             * fique completamente vertical.
+             */
+
+            if (
+                Math.abs(ball.dx) <
+                ballConfig.minimumHorizontalSpeed
+            ) {
+
+                const direction =
+                    ball.dx >= 0
+                        ? 1
+                        : -1;
+
+
+                ball.dx =
+                    ballConfig.minimumHorizontalSpeed *
+                    direction;
+            }
+
+
+            /*
+             * Recalcula DY para
+             * manter a velocidade.
+             */
+
+            const horizontal =
+                ball.dx;
+
+
+            const verticalSquared =
+                (
+                    ball.speed *
+                    ball.speed
+                ) -
+                (
+                    horizontal *
+                    horizontal
+                );
+
+
+            const vertical =
+                Math.sqrt(
+                    Math.max(
+                        1,
+                        verticalSquared
+                    )
+                );
+
+
+            ball.dy =
+                -vertical;
+
+
+            /*
+             * Pequena variação.
+             */
+
+            ball.dx +=
+                (
+                    Math.random() -
+                    0.5
+                ) *
+                0.25;
+
+
+            limitHorizontalSpeed(
+                ball
             );
+        }
+    }
+
+
+    // ========================================
+    // LIMITAR VELOCIDADE HORIZONTAL
+    // ========================================
+
+    function limitHorizontalSpeed(
+        ball
+    ) {
+
+        if (
+            ball.dx >
+            ballConfig.maximumHorizontalSpeed
+        ) {
+
+            ball.dx =
+                ballConfig.maximumHorizontalSpeed;
+        }
+
+
+        if (
+            ball.dx <
+            -ballConfig.maximumHorizontalSpeed
+        ) {
+
+            ball.dx =
+                -ballConfig.maximumHorizontalSpeed;
+        }
 
 
         /*
-         * Quanto mais distante do centro,
-         * mais diagonal será a trajetória.
-         */
-
-        const maxHorizontal =
-            Math.min(
-                ball.speed * 0.95,
-                ballConfig.maximumHorizontalSpeed
-            );
-
-
-        ball.dx =
-            normalizedHit *
-            maxHorizontal;
-
-
-        /*
-         * Impede que a bola fique vertical
-         * demais quando acerta exatamente
-         * o centro da barra.
+         * Evita trajetória quase vertical.
          */
 
         if (
@@ -708,9 +891,9 @@ function checkPlayerCollision(ball) {
         ) {
 
             const direction =
-                ball.dx < 0
-                    ? -1
-                    : 1;
+                ball.dx >= 0
+                    ? 1
+                    : -1;
 
 
             ball.dx =
@@ -720,1257 +903,1257 @@ function checkPlayerCollision(ball) {
 
 
         /*
-         * Recalcula DY para manter
-         * aproximadamente a mesma velocidade.
-         */
-
-        const currentSpeed =
-            Math.sqrt(
-                ball.dx * ball.dx +
-                ball.dy * ball.dy
-            );
-
-
-        const targetSpeed =
-            ball.speed;
-
-
-        const speedRatio =
-            targetSpeed /
-            currentSpeed;
-
-
-        ball.dx *= speedRatio;
-        ball.dy *= speedRatio;
-
-
-        /*
-         * Garante que a bola volte para cima.
+         * Garante que a bola
+         * continue subindo após a barra.
          */
 
         ball.dy =
-            -Math.abs(ball.dy);
-
-
-        /*
-         * Pequena variação aleatória.
-         */
-
-        ball.dx +=
-            (Math.random() - 0.5) *
-            0.25;
-
-
-        limitBallHorizontalSpeed(ball);
-    }
-}
-
-
-// ========================================
-// LIMITAR VELOCIDADE HORIZONTAL
-// ========================================
-
-function limitBallHorizontalSpeed(ball) {
-
-    if (
-        ball.dx >
-        ballConfig.maximumHorizontalSpeed
-    ) {
-
-        ball.dx =
-            ballConfig.maximumHorizontalSpeed;
-    }
-
-
-    if (
-        ball.dx <
-        -ballConfig.maximumHorizontalSpeed
-    ) {
-
-        ball.dx =
-            -ballConfig.maximumHorizontalSpeed;
-    }
-
-
-    /*
-     * Evita trajetória vertical demais.
-     */
-
-    if (
-        Math.abs(ball.dx) <
-        ballConfig.minimumHorizontalSpeed
-    ) {
-
-        const direction =
-            ball.dx >= 0
-                ? 1
-                : -1;
-
-
-        ball.dx =
-            ballConfig.minimumHorizontalSpeed *
-            direction;
-    }
-}
-
-
-// ========================================
-// COLISÃO COM BLOCOS
-// ========================================
-
-function checkBlockCollision(ball) {
-
-    for (const block of blocks) {
-
-        if (block.destroyed) {
-            continue;
-        }
-
-
-        const collision =
-            ball.x +
-            ball.radius >
-            block.x &&
-
-            ball.x -
-            ball.radius <
-            block.x +
-            block.width &&
-
-            ball.y +
-            ball.radius >
-            block.y &&
-
-            ball.y -
-            ball.radius <
-            block.y +
-            block.height;
-
-
-        if (!collision) {
-            continue;
-        }
-
-
-        block.destroyed = true;
-
-
-        score += 10;
-
-        updateScore();
-
-
-        /*
-         * Se o bloco possuir power-up,
-         * cria o objeto que cairá.
-         */
-
-        if (
-            block.powerUpType
-        ) {
-
-            createPowerUp(
-                block.x +
-                block.width / 2,
-
-                block.y +
-                block.height / 2,
-
-                block.powerUpType
+            -Math.abs(
+                ball.dy
             );
-        }
+    }
 
 
-        /*
-         * Descobre de qual lado
-         * a bola atingiu o bloco.
-         */
+    // ========================================
+    // COLISÃO COM BLOCOS
+    // ========================================
 
-        const previousX =
-            ball.x -
-            ball.dx;
+    function checkBlockCollision(
+        ball
+    ) {
 
-
-        const previousY =
-            ball.y -
-            ball.dy;
-
-
-        const hitFromLeft =
-            previousX +
-            ball.radius <=
-            block.x;
-
-
-        const hitFromRight =
-            previousX -
-            ball.radius >=
-            block.x +
-            block.width;
-
-
-        const hitFromTop =
-            previousY +
-            ball.radius <=
-            block.y;
-
-
-        const hitFromBottom =
-            previousY -
-            ball.radius >=
-            block.y +
-            block.height;
-
-
-        /*
-         * Colisão horizontal
-         */
-
-        if (
-            hitFromLeft ||
-            hitFromRight
+        for (
+            const block of blocks
         ) {
-
-            ball.dx *= -1;
-        }
-
-
-        /*
-         * Colisão vertical
-         */
-
-        else if (
-            hitFromTop ||
-            hitFromBottom
-        ) {
-
-            ball.dy *= -1;
-        }
-
-
-        /*
-         * Caso não consiga determinar,
-         * usa colisão vertical.
-         */
-
-        else {
-
-            ball.dy *= -1;
-        }
-
-
-        /*
-         * Pequena alteração de direção.
-         */
-
-        ball.dx +=
-            (Math.random() - 0.5) *
-            0.45;
-
-
-        limitBallHorizontalSpeed(ball);
-
-
-        /*
-         * Aumenta gradualmente
-         * a velocidade da bola.
-         */
-
-        increaseBallSpeed(ball);
-
-
-        checkWin();
-
-
-        break;
-    }
-}
-
-
-// ========================================
-// AUMENTAR VELOCIDADE DA BOLA
-// ========================================
-
-function increaseBallSpeed(ball) {
-
-    if (
-        ball.speed >=
-        ballConfig.maxSpeed
-    ) {
-        return;
-    }
-
-
-    ball.speed += 0.04;
-
-
-    if (
-        ball.speed >
-        ballConfig.maxSpeed
-    ) {
-
-        ball.speed =
-            ballConfig.maxSpeed;
-    }
-
-
-    const currentSpeed =
-        Math.sqrt(
-            ball.dx * ball.dx +
-            ball.dy * ball.dy
-        );
-
-
-    if (
-        currentSpeed === 0
-    ) {
-        return;
-    }
-
-
-    const ratio =
-        ball.speed /
-        currentSpeed;
-
-
-    ball.dx *= ratio;
-    ball.dy *= ratio;
-
-
-    limitBallHorizontalSpeed(ball);
-}
-
-
-// ========================================
-// CRIAR POWER-UP
-// ========================================
-
-function createPowerUp(
-    x,
-    y,
-    type
-) {
-
-    powerUps.push({
-
-        x: x,
-        y: y,
-
-        width: 24,
-        height: 24,
-
-        speed: 2.2,
-
-        type: type
-    });
-}
-
-
-// ========================================
-// ATUALIZAR POWER-UPS
-// ========================================
-
-function updatePowerUps() {
-
-    for (
-        let i = powerUps.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        const powerUp =
-            powerUps[i];
-
-
-        powerUp.y +=
-            powerUp.speed;
-
-
-        /*
-         * Colisão com player
-         */
-
-        const collision =
-            powerUp.x +
-            powerUp.width / 2 >=
-            player.x &&
-
-            powerUp.x -
-            powerUp.width / 2 <=
-            player.x +
-            player.width &&
-
-            powerUp.y +
-            powerUp.height / 2 >=
-            player.y &&
-
-            powerUp.y -
-            powerUp.height / 2 <=
-            player.y +
-            player.height;
-
-
-        if (collision) {
-
-            activatePowerUp(
-                powerUp.type
-            );
-
-
-            powerUps.splice(
-                i,
-                1
-            );
-
-
-            continue;
-        }
-
-
-        /*
-         * Remove quando sair da tela.
-         */
-
-        if (
-            powerUp.y -
-            powerUp.height / 2 >
-            canvas.height
-        ) {
-
-            powerUps.splice(
-                i,
-                1
-            );
-        }
-    }
-}
-
-
-// ========================================
-// ATIVAR POWER-UP
-// ========================================
-
-function activatePowerUp(type) {
-
-    /*
-     * Bônus de pontuação
-     */
-
-    score += 25;
-
-    updateScore();
-
-
-    // ====================================
-    // EXPAND
-    // ====================================
-
-    if (
-        type ===
-        powerUpTypes.EXPAND
-    ) {
-
-        activateExpand();
-    }
-
-
-    // ====================================
-    // MULTIBALL
-    // ====================================
-
-    if (
-        type ===
-        powerUpTypes.MULTIBALL
-    ) {
-
-        activateMultiball();
-    }
-
-
-    // ====================================
-    // SLOW
-    // ====================================
-
-    if (
-        type ===
-        powerUpTypes.SLOW
-    ) {
-
-        activateSlow();
-    }
-}
-
-
-// ========================================
-// POWER-UP EXPAND
-// ========================================
-
-function activateExpand() {
-
-    player.width =
-        player.expandedWidth;
-
-
-    powerUpState.expandActive =
-        true;
-
-
-    clearTimeout(
-        powerUpState.expandTimer
-    );
-
-
-    powerUpState.expandTimer =
-        setTimeout(() => {
-
-            player.width =
-                player.normalWidth;
-
-
-            /*
-             * Corrige a posição caso
-             * a barra fique fora da tela.
-             */
 
             if (
-                player.x +
-                player.width >
-                canvas.width
+                block.destroyed
             ) {
-
-                player.x =
-                    canvas.width -
-                    player.width;
+                continue;
             }
 
 
-            powerUpState.expandActive =
-                false;
+            const collision =
 
-        }, 7000);
-}
+                ball.x +
+                ball.radius >
+                block.x &&
 
+                ball.x -
+                ball.radius <
+                block.x +
+                block.width &&
 
-// ========================================
-// POWER-UP MULTIBALL
-// ========================================
+                ball.y +
+                ball.radius >
+                block.y &&
 
-function activateMultiball() {
-
-    /*
-     * Faz uma cópia das bolas existentes.
-     *
-     * Limitamos a 3 bolas para evitar
-     * uma quantidade exagerada.
-     */
-
-    const originalBalls =
-        [...balls];
+                ball.y -
+                ball.radius <
+                block.y +
+                block.height;
 
 
-    for (
-        const originalBall
-        of originalBalls
-    ) {
-
-        if (
-            balls.length >= 3
-        ) {
-            break;
-        }
+            if (!collision) {
+                continue;
+            }
 
 
-        const newBall =
-            createBall(
-                originalBall.x,
-                originalBall.y,
-                originalBall.speed
-            );
+            /*
+             * Destrói o bloco.
+             */
+
+            block.destroyed =
+                true;
 
 
-        /*
-         * Faz a nova bola partir
-         * para uma direção diferente.
-         */
+            /*
+             * Pontuação.
+             */
 
-        newBall.dx =
-            -originalBall.dx;
+            score += 10;
 
-
-        newBall.dy =
-            originalBall.dy;
+            updateScore();
 
 
-        /*
-         * Pequena variação no ângulo.
-         */
+            /*
+             * Cria o power-up
+             * se o bloco possuir um.
+             */
 
-        newBall.dx +=
-            (Math.random() - 0.5) *
-            2;
-
-
-        limitBallHorizontalSpeed(
-            newBall
-        );
-
-
-        balls.push(
-            newBall
-        );
-    }
-}
-
-
-// ========================================
-// POWER-UP SLOW
-// ========================================
-
-function activateSlow() {
-
-    /*
-     * Evita ativar várias reduções
-     * simultaneamente.
-     */
-
-    powerUpState.slowActive =
-        true;
-
-
-    clearTimeout(
-        powerUpState.slowTimer
-    );
-
-
-    /*
-     * Reduz a velocidade atual
-     * das bolas.
-     */
-
-    for (
-        const ball
-        of balls
-    ) {
-
-        ball.speed *= 0.55;
-
-
-        ball.dx *= 0.55;
-        ball.dy *= 0.55;
-
-
-        /*
-         * Garante uma velocidade mínima.
-         */
-
-        if (
-            ball.speed < 2.5
-        ) {
-
-            ball.speed = 2.5;
-        }
-    }
-
-
-    powerUpState.slowTimer =
-        setTimeout(() => {
-
-            for (
-                const ball
-                of balls
+            if (
+                block.powerUpType
             ) {
 
-                ball.speed *=
-                    1.82;
+                createPowerUp(
+                    block.x +
+                    block.width / 2,
 
+                    block.y +
+                    block.height / 2,
 
-                if (
-                    ball.speed >
-                    ballConfig.maxSpeed
-                ) {
-
-                    ball.speed =
-                        ballConfig.maxSpeed;
-                }
-
-
-                const currentSpeed =
-                    Math.sqrt(
-                        ball.dx *
-                        ball.dx +
-                        ball.dy *
-                        ball.dy
-                    );
-
-
-                if (
-                    currentSpeed > 0
-                ) {
-
-                    const ratio =
-                        ball.speed /
-                        currentSpeed;
-
-
-                    ball.dx *=
-                        ratio;
-
-
-                    ball.dy *=
-                        ratio;
-                }
-
-
-                limitBallHorizontalSpeed(
-                    ball
+                    block.powerUpType
                 );
             }
 
 
-            powerUpState.slowActive =
-                false;
+            /*
+             * Calcula a penetração
+             * em cada lado do bloco.
+             */
 
-        }, 5000);
-}
+            const overlapLeft =
+                (ball.x + ball.radius) - block.x;
+
+            const overlapRight =
+                (block.x + block.width) - (ball.x - ball.radius);
+
+            const overlapTop =
+                (ball.y + ball.radius) - block.y;
+
+            const overlapBottom =
+                (block.y + block.height) - (ball.y - ball.radius);
+
+            const minOverlapX = Math.min(
+                overlapLeft,
+                overlapRight
+            );
+
+            const minOverlapY = Math.min(
+                overlapTop,
+                overlapBottom
+            );
+
+            if (minOverlapX < minOverlapY) {
+
+                ball.dx = -ball.dx;
+
+                if (overlapLeft < overlapRight) {
+                    ball.x = block.x - ball.radius;
+                } else {
+                    ball.x = block.x + block.width + ball.radius;
+                }
+            } else {
+
+                ball.dy = -ball.dy;
+
+                if (overlapTop < overlapBottom) {
+                    ball.y = block.y - ball.radius;
+                } else {
+                    ball.y = block.y + block.height + ball.radius;
+                }
+            }
 
 
-// ========================================
-// PERDER VIDA
-// ========================================
+            /*
+             * Pequena alteração
+             * para variar a trajetória.
+             */
 
-function loseLife() {
+            ball.dx +=
+                (
+                    Math.random() -
+                    0.5
+                ) *
+                0.4;
 
-    lives--;
 
-    updateLives();
+            increaseBallSpeed(
+                ball
+            );
 
 
-    if (
-        lives <= 0
-    ) {
+            checkWin();
 
-        gameOver();
 
-        return;
+            /*
+             * Uma bola só pode destruir
+             * um bloco por frame.
+             */
+
+            break;
+        }
     }
 
 
-    /*
-     * Limpa power-ups da tela.
-     */
+    // ========================================
+    // AUMENTAR VELOCIDADE
+    // ========================================
 
-    powerUps.length = 0;
-
-
-    resetPlayer();
-    resetBall();
-}
-
-
-// ========================================
-// VERIFICAR VITÓRIA
-// ========================================
-
-function checkWin() {
-
-    const remainingBlocks =
-        blocks.some(
-            block =>
-                !block.destroyed
-        );
-
-
-    if (
-        !remainingBlocks
-    ) {
-
-        winGame();
-    }
-}
-
-
-// ========================================
-// GAME OVER
-// ========================================
-
-function gameOver() {
-
-    gameRunning = false;
-
-
-    finalScoreElement.textContent =
-        formatScore(score);
-
-
-    gameOverScreen.classList.remove(
-        "hidden"
-    );
-}
-
-
-// ========================================
-// VITÓRIA
-// ========================================
-
-function winGame() {
-
-    gameRunning = false;
-
-
-    score += 500;
-
-    updateScore();
-
-
-    winScoreElement.textContent =
-        formatScore(score);
-
-
-    winScreen.classList.remove(
-        "hidden"
-    );
-}
-
-
-// ========================================
-// ATUALIZAR SCORE
-// ========================================
-
-function updateScore() {
-
-    scoreElement.textContent =
-        formatScore(score);
-}
-
-
-function formatScore(value) {
-
-    return String(value)
-        .padStart(4, "0");
-}
-
-
-// ========================================
-// ATUALIZAR VIDAS
-// ========================================
-
-function updateLives() {
-
-    livesElement.textContent =
-        "♥".repeat(lives);
-}
-
-
-// ========================================
-// DESENHAR PLAYER
-// ========================================
-
-function drawPlayer() {
-
-    ctx.fillStyle =
-        "#ffffff";
-
-
-    ctx.fillRect(
-        player.x,
-        player.y,
-        player.width,
-        player.height
-    );
-}
-
-
-// ========================================
-// DESENHAR BOLAS
-// ========================================
-
-function drawBalls() {
-
-    for (
-        const ball
-        of balls
+    function increaseBallSpeed(
+        ball
     ) {
 
         if (
-            !ball.active
+            ball.speed >=
+            ballConfig.maxSpeed
         ) {
-            continue;
+            return;
         }
 
 
-        ctx.beginPath();
+        ball.speed += 0.03;
 
 
-        ctx.arc(
-            ball.x,
-            ball.y,
-            ball.radius,
-            0,
-            Math.PI * 2
+        if (
+            ball.speed >
+            ballConfig.maxSpeed
+        ) {
+
+            ball.speed =
+                ballConfig.maxSpeed;
+        }
+
+
+        /*
+         * Normaliza a direção.
+         */
+
+        const currentSpeed =
+            Math.sqrt(
+                ball.dx *
+                ball.dx +
+
+                ball.dy *
+                ball.dy
+            );
+
+
+        if (
+            currentSpeed <= 0
+        ) {
+            return;
+        }
+
+
+        const ratio =
+            ball.speed /
+            currentSpeed;
+
+
+        ball.dx *=
+            ratio;
+
+
+        ball.dy *=
+            ratio;
+
+
+        limitHorizontalSpeed(
+            ball
+        );
+    }
+
+
+    // ========================================
+    // CRIAR POWER-UP
+    // ========================================
+
+    function createPowerUp(
+        x,
+        y,
+        type
+    ) {
+
+        powerUps.push({
+
+            x,
+
+            y,
+
+            width: 24,
+
+            height: 24,
+
+            speed: 2.2,
+
+            type
+        });
+    }
+
+
+    // ========================================
+    // ATUALIZAR POWER-UPS
+    // ========================================
+
+    function updatePowerUps() {
+
+        for (
+            let i = powerUps.length - 1;
+            i >= 0;
+            i--
+        ) {
+
+            const powerUp =
+                powerUps[i];
+
+
+            /*
+             * Faz o poder cair.
+             */
+
+            powerUp.y +=
+                powerUp.speed;
+
+
+            /*
+             * Colisão com a barra.
+             */
+
+            const collision =
+
+                powerUp.x +
+                powerUp.width / 2 >=
+                player.x &&
+
+                powerUp.x -
+                powerUp.width / 2 <=
+                player.x +
+                player.width &&
+
+                powerUp.y +
+                powerUp.height / 2 >=
+                player.y &&
+
+                powerUp.y -
+                powerUp.height / 2 <=
+                player.y +
+                player.height;
+
+
+            if (collision) {
+
+                activatePowerUp(
+                    powerUp.type
+                );
+
+
+                powerUps.splice(
+                    i,
+                    1
+                );
+
+
+                continue;
+            }
+
+
+            /*
+             * Remove se sair da tela.
+             */
+
+            if (
+                powerUp.y -
+                powerUp.height / 2 >
+                canvas.height
+            ) {
+
+                powerUps.splice(
+                    i,
+                    1
+                );
+            }
+        }
+    }
+
+
+    // ========================================
+    // ATIVAR POWER-UP
+    // ========================================
+
+    function activatePowerUp(
+        type
+    ) {
+
+        /*
+         * Bônus.
+         */
+
+        score += 25;
+
+        updateScore();
+
+
+        switch (type) {
+
+            case POWER_UP.EXPAND:
+
+                activateExpand();
+
+                break;
+
+
+            case POWER_UP.MULTIBALL:
+
+                activateMultiball();
+
+                break;
+
+
+            case POWER_UP.SLOW:
+
+                activateSlow();
+
+                break;
+        }
+    }
+
+
+    // ========================================
+    // POWER-UP: EXPAND
+    // ========================================
+
+    function activateExpand() {
+
+        player.width =
+            player.expandedWidth;
+
+
+        clearTimeout(
+            expandTimeout
         );
 
 
-        ctx.fillStyle =
-            "#ffffff";
+        expandTimeout =
+            setTimeout(() => {
+
+                player.width =
+                    player.normalWidth;
 
 
-        ctx.fill();
+                /*
+                 * Corrige a posição
+                 * da barra.
+                 */
 
+                if (
+                    player.x +
+                    player.width >
+                    canvas.width
+                ) {
 
-        ctx.closePath();
+                    player.x =
+                        canvas.width -
+                        player.width;
+                }
+
+            }, 7000);
     }
-}
 
 
-// ========================================
-// DESENHAR BLOCOS
-// ========================================
+    // ========================================
+    // POWER-UP: MULTIBALL
+    // ========================================
 
-function drawBlocks() {
+    function activateMultiball() {
 
-    for (
-        const block
-        of blocks
-    ) {
+        /*
+         * Limite de 3 bolas.
+         */
 
         if (
-            block.destroyed
+            balls.length >= 3
         ) {
-            continue;
+
+            return;
         }
 
+
+        /*
+         * Copia as bolas atuais
+         * antes de adicionar novas.
+         */
+
+        const currentBalls =
+            [...balls];
+
+
+        for (
+            const originalBall
+            of currentBalls
+        ) {
+
+            if (
+                balls.length >= 3
+            ) {
+
+                break;
+            }
+
+
+            const newBall =
+                createBall(
+                    originalBall.x,
+                    originalBall.y,
+                    originalBall.speed
+                );
+
+
+            /*
+             * Direção contrária.
+             */
+
+            newBall.dx =
+                -originalBall.dx;
+
+
+            newBall.dy =
+                originalBall.dy;
+
+
+            /*
+             * Pequena variação.
+             */
+
+            newBall.dx +=
+                (
+                    Math.random() -
+                    0.5
+                ) *
+                2;
+
+
+            limitHorizontalSpeed(
+                newBall
+            );
+
+
+            balls.push(
+                newBall
+            );
+        }
+    }
+
+
+    // ========================================
+    // POWER-UP: SLOW
+    // ========================================
+
+    function activateSlow() {
+
+        /*
+         * Diminui as bolas.
+         */
+
+        for (
+            const ball of balls
+        ) {
+
+            ball.speed *=
+                0.55;
+
+
+            ball.dx *=
+                0.55;
+
+
+            ball.dy *=
+                0.55;
+
+
+            if (
+                ball.speed < 2.5
+            ) {
+
+                ball.speed =
+                    2.5;
+            }
+        }
+
+
+        clearTimeout(
+            slowTimeout
+        );
+
+
+        slowTimeout =
+            setTimeout(() => {
+
+                for (
+                    const ball of balls
+                ) {
+
+                    ball.speed *=
+                        1.82;
+
+
+                    if (
+                        ball.speed >
+                        ballConfig.maxSpeed
+                    ) {
+
+                        ball.speed =
+                            ballConfig.maxSpeed;
+                    }
+
+
+                    const currentSpeed =
+                        Math.sqrt(
+                            ball.dx *
+                            ball.dx +
+
+                            ball.dy *
+                            ball.dy
+                        );
+
+
+                    if (
+                        currentSpeed > 0
+                    ) {
+
+                        const ratio =
+                            ball.speed /
+                            currentSpeed;
+
+
+                        ball.dx *=
+                            ratio;
+
+
+                        ball.dy *=
+                            ratio;
+                    }
+
+
+                    limitHorizontalSpeed(
+                        ball
+                    );
+                }
+
+            }, 5000);
+    }
+
+
+    // ========================================
+    // PERDER VIDA
+    // ========================================
+
+    function loseLife() {
+
+        lives--;
+
+        updateLives();
+
+
+        if (
+            lives <= 0
+        ) {
+
+            gameOver();
+
+            return;
+        }
+
+
+        /*
+         * Remove power-ups da tela.
+         */
+
+        powerUps = [];
+
+
+        resetPlayer();
+
+        resetBall();
+    }
+
+
+    // ========================================
+    // VERIFICAR VITÓRIA
+    // ========================================
+
+    function checkWin() {
+
+        const remainingBlocks =
+            blocks.some(
+                block =>
+                    !block.destroyed
+            );
+
+
+        if (
+            !remainingBlocks
+        ) {
+
+            winGame();
+        }
+    }
+
+
+    // ========================================
+    // GAME OVER
+    // ========================================
+
+    function gameOver() {
+
+        gameRunning = false;
+
+
+        finalScoreElement.textContent =
+            formatScore(
+                score
+            );
+
+
+        gameOverScreen.classList.remove(
+            "hidden"
+        );
+    }
+
+
+    // ========================================
+    // VITÓRIA
+    // ========================================
+
+    function winGame() {
+
+        gameRunning = false;
+
+
+        score += 500;
+
+
+        updateScore();
+
+
+        winScoreElement.textContent =
+            formatScore(
+                score
+            );
+
+
+        winScreen.classList.remove(
+            "hidden"
+        );
+    }
+
+
+    // ========================================
+    // SCORE
+    // ========================================
+
+    function updateScore() {
+
+        scoreElement.textContent =
+            formatScore(
+                score
+            );
+    }
+
+
+    function formatScore(
+        value
+    ) {
+
+        return String(value)
+            .padStart(
+                4,
+                "0"
+            );
+    }
+
+
+    // ========================================
+    // VIDAS
+    // ========================================
+
+    function updateLives() {
+
+        livesElement.textContent =
+            "♥".repeat(
+                Math.max(
+                    0,
+                    lives
+                )
+            );
+    }
+
+
+    // ========================================
+    // DESENHAR PLAYER
+    // ========================================
+
+    function drawPlayer() {
 
         ctx.fillStyle =
             "#ffffff";
 
 
         ctx.fillRect(
-            block.x,
-            block.y,
-            block.width,
-            block.height
+
+            player.x,
+
+            player.y,
+
+            player.width,
+
+            player.height
         );
+    }
 
 
-        /*
-         * Indica visualmente que o bloco
-         * possui um power-up.
-         */
+    // ========================================
+    // DESENHAR BOLAS
+    // ========================================
 
-        if (
-            block.powerUpType
+    function drawBalls() {
+
+        for (
+            const ball of balls
+        ) {
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+
+                ball.x,
+
+                ball.y,
+
+                ball.radius,
+
+                0,
+
+                Math.PI * 2
+            );
+
+
+            ctx.fillStyle =
+                "#ffffff";
+
+
+            ctx.fill();
+
+
+            ctx.closePath();
+        }
+    }
+
+
+    // ========================================
+    // DESENHAR BLOCOS
+    // ========================================
+
+    function drawBlocks() {
+
+        for (
+            const block of blocks
+        ) {
+
+            if (
+                block.destroyed
+            ) {
+
+                continue;
+            }
+
+
+            /*
+             * Bloco.
+             */
+
+            ctx.fillStyle =
+                "#ffffff";
+
+
+            ctx.fillRect(
+
+                block.x,
+
+                block.y,
+
+                block.width,
+
+                block.height
+            );
+
+
+            /*
+             * Símbolo do power-up.
+             */
+
+            if (
+                block.powerUpType
+            ) {
+
+                drawPowerUpSymbol(
+
+                    block.x +
+                    block.width / 2,
+
+                    block.y +
+                    block.height / 2,
+
+                    block.powerUpType,
+
+                    true
+                );
+            }
+        }
+    }
+
+
+    // ========================================
+    // DESENHAR POWER-UPS
+    // ========================================
+
+    function drawPowerUps() {
+
+        for (
+            const powerUp of powerUps
         ) {
 
             drawPowerUpSymbol(
-                block.x +
-                block.width / 2,
 
-                block.y +
-                block.height / 2,
+                powerUp.x,
 
-                block.powerUpType,
+                powerUp.y,
 
-                true
+                powerUp.type,
+
+                false
             );
         }
     }
-}
 
 
-// ========================================
-// DESENHAR POWER-UPS
-// ========================================
+    // ========================================
+    // DESENHAR SÍMBOLO POWER-UP
+    // ========================================
 
-function drawPowerUps() {
+    function drawPowerUpSymbol(
 
-    for (
-        const powerUp
-        of powerUps
-    ) {
+        x,
 
-        drawPowerUpSymbol(
-            powerUp.x,
-            powerUp.y,
-            powerUp.type,
-            false
-        );
-    }
-}
+        y,
 
+        type,
 
-// ========================================
-// DESENHAR SÍMBOLO DO POWER-UP
-// ========================================
-
-function drawPowerUpSymbol(
-    x,
-    y,
-    type,
-    insideBlock
-) {
-
-    /*
-     * Quando está dentro do bloco,
-     * usamos preto.
-     *
-     * Quando está caindo,
-     * usamos branco.
-     */
-
-    const color =
         insideBlock
-            ? "#000000"
-            : "#ffffff";
-
-
-    ctx.fillStyle =
-        color;
-
-
-    ctx.strokeStyle =
-        color;
-
-
-    ctx.lineWidth = 2;
-
-
-    // ====================================
-    // EXPAND
-    // ====================================
-
-    if (
-        type ===
-        powerUpTypes.EXPAND
     ) {
 
-        ctx.beginPath();
-
-        ctx.moveTo(
-            x - 7,
-            y
-        );
-
-        ctx.lineTo(
-            x + 7,
-            y
-        );
-
-        ctx.stroke();
+        const color =
+            insideBlock
+                ? "#000000"
+                : "#ffffff";
 
 
-        ctx.beginPath();
+        ctx.fillStyle =
+            color;
 
-        ctx.moveTo(
-            x - 7,
-            y
-        );
 
-        ctx.lineTo(
-            x - 3,
-            y - 4
-        );
+        ctx.strokeStyle =
+            color;
 
-        ctx.moveTo(
-            x - 7,
-            y
-        );
 
-        ctx.lineTo(
-            x - 3,
-            y + 4
-        );
+        ctx.lineWidth = 2;
 
-        ctx.moveTo(
-            x + 7,
-            y
-        );
 
-        ctx.lineTo(
-            x + 3,
-            y - 4
-        );
+        // ------------------------------------
+        // EXPAND
+        // ------------------------------------
 
-        ctx.moveTo(
-            x + 7,
-            y
-        );
+        if (
+            type ===
+            POWER_UP.EXPAND
+        ) {
 
-        ctx.lineTo(
-            x + 3,
-            y + 4
-        );
+            ctx.beginPath();
 
-        ctx.stroke();
 
-        return;
+            ctx.moveTo(
+                x - 7,
+                y
+            );
+
+
+            ctx.lineTo(
+                x + 7,
+                y
+            );
+
+
+            ctx.stroke();
+
+
+            ctx.beginPath();
+
+
+            ctx.moveTo(
+                x - 7,
+                y
+            );
+
+
+            ctx.lineTo(
+                x - 3,
+                y - 4
+            );
+
+
+            ctx.moveTo(
+                x - 7,
+                y
+            );
+
+
+            ctx.lineTo(
+                x - 3,
+                y + 4
+            );
+
+
+            ctx.moveTo(
+                x + 7,
+                y
+            );
+
+
+            ctx.lineTo(
+                x + 3,
+                y - 4
+            );
+
+
+            ctx.moveTo(
+                x + 7,
+                y
+            );
+
+
+            ctx.lineTo(
+                x + 3,
+                y + 4
+            );
+
+
+            ctx.stroke();
+
+
+            return;
+        }
+
+
+        // ------------------------------------
+        // MULTIBALL
+        // ------------------------------------
+
+        if (
+            type ===
+            POWER_UP.MULTIBALL
+        ) {
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+
+                x - 5,
+
+                y,
+
+                3,
+
+                0,
+
+                Math.PI * 2
+            );
+
+
+            ctx.arc(
+
+                x + 5,
+
+                y,
+
+                3,
+
+                0,
+
+                Math.PI * 2
+            );
+
+
+            ctx.fill();
+
+
+            return;
+        }
+
+
+        // ------------------------------------
+        // SLOW
+        // ------------------------------------
+
+        if (
+            type ===
+            POWER_UP.SLOW
+        ) {
+
+            ctx.font =
+                "bold 14px Arial";
+
+
+            ctx.textAlign =
+                "center";
+
+
+            ctx.textBaseline =
+                "middle";
+
+
+            ctx.fillText(
+
+                "S",
+
+                x,
+
+                y
+            );
+        }
     }
 
 
-    // ====================================
-    // MULTIBALL
-    // ====================================
+    // ========================================
+    // FUNDO
+    // ========================================
 
-    if (
-        type ===
-        powerUpTypes.MULTIBALL
-    ) {
+    function drawBackground() {
 
-        ctx.beginPath();
+        ctx.fillStyle =
+            "#050505";
 
-        ctx.arc(
-            x - 5,
-            y,
-            3,
+
+        ctx.fillRect(
+
             0,
-            Math.PI * 2
-        );
 
-        ctx.arc(
-            x + 5,
-            y,
-            3,
             0,
-            Math.PI * 2
+
+            canvas.width,
+
+            canvas.height
         );
+    }
 
-        ctx.fill();
 
-        return;
+    // ========================================
+    // DESENHAR JOGO
+    // ========================================
+
+    function draw() {
+
+        drawBackground();
+
+        drawBlocks();
+
+        drawPowerUps();
+
+        drawPlayer();
+
+        drawBalls();
     }
 
 
-    // ====================================
-    // SLOW
-    // ====================================
+    // ========================================
+    // UPDATE
+    // ========================================
 
-    if (
-        type ===
-        powerUpTypes.SLOW
-    ) {
+    function update() {
 
-        ctx.font =
-            "bold 14px Arial";
+        updatePlayer();
 
-        ctx.textAlign =
-            "center";
+        updateBalls();
 
-        ctx.textBaseline =
-            "middle";
-
-
-        ctx.fillText(
-            "S",
-            x,
-            y
-        );
+        updatePowerUps();
     }
-}
 
 
-// ========================================
-// FUNDO
-// ========================================
+    // ========================================
+    // GAME LOOP
+    // ========================================
 
-function drawBackground() {
+    function gameLoop() {
 
-    ctx.fillStyle =
-        "#050505";
+        if (
+            !gameRunning
+        ) {
+
+            return;
+        }
 
 
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
+        update();
+
+        draw();
+
+
+        animationId =
+            requestAnimationFrame(
+                gameLoop
+            );
+    }
+
+
+    // ========================================
+    // BOTÃO INICIAR
+    // ========================================
+
+    startButton.addEventListener(
+        "click",
+        () => {
+
+            startGame();
+        }
     );
-}
 
 
-// ========================================
-// GAME LOOP
-// ========================================
+    // ========================================
+    // BOTÃO REINICIAR
+    // ========================================
 
-function gameLoop() {
+    restartButton.addEventListener(
+        "click",
+        () => {
 
-    if (
-        !gameRunning
-    ) {
-
-        return;
-    }
+            startGame();
+        }
+    );
 
 
-    update();
+    // ========================================
+    // BOTÃO JOGAR NOVAMENTE
+    // ========================================
+
+    nextButton.addEventListener(
+        "click",
+        () => {
+
+            startGame();
+        }
+    );
+
+
+    // ========================================
+    // ESTADO INICIAL
+    // ========================================
+
+    createBlocks();
+
+    updateScore();
+
+    updateLives();
+
+    resetPlayer();
+
+    resetBall();
 
     draw();
 
 
-    animationId =
-        requestAnimationFrame(
-            gameLoop
-        );
-}
+    console.log(
+        "Pong Blocks V1 carregado com sucesso."
+    );
 
-
-// ========================================
-// UPDATE
-// ========================================
-
-function update() {
-
-    updatePlayer();
-
-    updateBalls();
-
-    updatePowerUps();
-}
-
-
-// ========================================
-// DRAW
-// ========================================
-
-function draw() {
-
-    drawBackground();
-
-    drawBlocks();
-
-    drawPowerUps();
-
-    drawPlayer();
-
-    drawBalls();
-}
-
-
-// ========================================
-// BOTÕES
-// ========================================
-
-startButton.addEventListener(
-    "click",
-    startGame
-);
-
-
-restartButton.addEventListener(
-    "click",
-    startGame
-);
-
-
-nextButton.addEventListener(
-    "click",
-    startGame
-);
-
-
-// ========================================
-// ESTADO INICIAL
-// ========================================
-
-createBlocks();
-
-draw();
-```
+});
