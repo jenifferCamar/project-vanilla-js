@@ -2,87 +2,113 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Pong Blocks</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#fff5fb">
+    <meta name="description" content="Pong Blocks: um quebra-blocos fofo, colorido, responsivo e cheio de power-ups.">
+    <title>Pong Blocks — Candy Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
 
-    <main class="game-container">
-
-        <header class="game-header">
-            <div>
-                <span>PONTOS</span>
-                <strong id="score">0000</strong>
+    <main class="game-shell">
+        <header class="topbar">
+            <div class="brand-zone">
+                <a class="brand" href="#" aria-label="Pong Blocks — início">
+                    <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="brand-copy">PONG <strong>BLOCKS</strong><small>Candy Arcade</small></span>
+                </a>
+                <div class="level-chip"><span>NÍVEL</span><strong id="level">01</strong></div>
             </div>
 
-            <h1>PONG BLOCKS</h1>
+            <div class="hud" aria-label="Status da partida">
+                <div class="hud-item hud-score"><span>PONTOS</span><strong id="score">000000</strong></div>
+                <div class="hud-item hud-lives"><span>VIDAS</span><strong id="lives" aria-label="3 vidas">● ● ●</strong></div>
+            </div>
+            <strong id="bestScore" class="sr-only">000000</strong>
 
-            <div>
-                <span>VIDAS</span>
-                <strong id="lives">♥♥♥</strong>
+            <div class="top-actions">
+                <button class="icon-button" id="soundButton" type="button" aria-label="Desativar som" aria-pressed="true" data-tooltip="Som"><span id="soundIcon" aria-hidden="true">♪</span></button>
+                <button class="icon-button" id="pauseButton" type="button" aria-label="Pausar jogo" data-tooltip="Pausar" disabled><span aria-hidden="true">Ⅱ</span></button>
+                <button class="icon-button" id="fullscreenButton" type="button" aria-label="Abrir em tela cheia" data-tooltip="Tela cheia"><span id="fullscreenIcon" aria-hidden="true">⛶</span></button>
             </div>
         </header>
 
-        <section class="game-area">
+        <section class="game-card" aria-label="Área do jogo">
+            <div class="game-stage" id="gameStage">
+                <canvas id="gameCanvas" width="960" height="600" aria-label="Jogo Pong Blocks"></canvas>
+                <div class="status-pill hidden" id="statusPill" role="status"><span id="statusIcon">✦</span><span id="statusText">Barra ampliada</span></div>
+                <div class="level-progress hidden" id="levelProgress" aria-label="Progresso da fase">
+                    <span class="progress-label">FASE</span>
+                    <span class="progress-track"><i id="progressFill"></i></span>
+                    <strong id="progressText">0%</strong>
+                </div>
 
-            <canvas id="gameCanvas" width="800" height="600"></canvas>
+                <div class="game-screen start-screen" id="startScreen">
+                    <div class="screen-content start-content">
+                        <p class="eyebrow"><span></span> CANDY ARCADE</p>
+                        <h1>QUEBRE.<br><em>BRILHE.</em> REPITA.</h1>
+                        <p class="lead">Uma arena cheia de cor: mantenha a bolinha no ar, faça combos e colecione poderes mágicos.</p>
+                        <p class="welcome-badge"><span aria-hidden="true">★</span> Fofo por fora, desafio por dentro!</p>
+                        <div class="feature-row" aria-label="Recursos do jogo">
+                            <span><b>03</b> vidas</span><span><b>∞</b> níveis</span><span><b>04</b> poderes</span>
+                        </div>
+                        <button class="primary-button" id="startButton" type="button">
+                            <span class="button-copy"><small>VAMOS NOS DIVERTIR?</small><strong>INICIAR JOGO</strong></span>
+                            <b aria-hidden="true">→</b>
+                        </button>
+                        <p class="quick-tip"><kbd>←</kbd><kbd>→</kbd> ou <kbd>A</kbd><kbd>D</kbd> para mover · <kbd>P</kbd> para pausar</p>
+                    </div>
+                    <div class="hero-orbit" aria-hidden="true">
+                        <div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div>
+                        <div class="hero-ball"></div><div class="hero-paddle"></div>
+                    </div>
+                </div>
 
-            <div id="startScreen" class="game-screen">
-                <h2>PONG BLOCKS</h2>
+                <div class="game-screen compact-screen hidden" id="pauseScreen">
+                    <div class="screen-content">
+                        <p class="eyebrow"><span></span> INTERVALO</p><h2>JOGO PAUSADO</h2>
+                        <p>Respire. A arena espera por você.</p>
+                        <button class="primary-button" id="resumeButton" type="button"><span>CONTINUAR</span><b aria-hidden="true">→</b></button>
+                        <small>Pressione <kbd>P</kbd> ou <kbd>Esc</kbd></small>
+                    </div>
+                </div>
 
-                <p>Destrua todos os blocos!</p>
+                <div class="game-screen compact-screen hidden" id="endScreen">
+                    <div class="screen-content">
+                        <p class="eyebrow" id="endEyebrow"><span></span> FIM DE JOGO</p><h2 id="endTitle">QUASE LÁ!</h2>
+                        <p id="endMessage">A arena levou essa. Tente superar seu recorde.</p>
+                        <div class="result-grid">
+                            <div><span>PONTOS</span><strong id="finalScore">000000</strong></div>
+                            <div><span>RECORDE</span><strong id="finalBest">000000</strong></div>
+                        </div>
+                        <button class="primary-button" id="restartButton" type="button"><span id="restartLabel">JOGAR NOVAMENTE</span><b aria-hidden="true">↻</b></button>
+                    </div>
+                </div>
 
-                <button id="startButton">
-                    INICIAR JOGO
-                </button>
-
-                <small>
-                    Use ← → ou A / D para movimentar a barra
-                </small>
+                <div class="countdown hidden" id="countdown" aria-live="polite"><span id="countdownText">3</span><small>PREPARE-SE</small></div>
             </div>
 
-            <div id="gameOverScreen" class="game-screen hidden">
-                <h2>GAME OVER</h2>
-
-                <p>
-                    Pontuação:
-                    <strong id="finalScore">0000</strong>
-                </p>
-
-                <button id="restartButton">
-                    JOGAR NOVAMENTE
-                </button>
+            <div class="mobile-controls" aria-label="Controles por toque">
+                <button id="moveLeft" type="button" aria-label="Mover para a esquerda">←</button><span>SEGURE PARA MOVER</span><button id="moveRight" type="button" aria-label="Mover para a direita">→</button>
             </div>
-
-            <div id="winScreen" class="game-screen hidden">
-                <h2>VOCÊ VENCEU!</h2>
-
-                <p>
-                    Pontuação:
-                    <strong id="winScore">0000</strong>
-                </p>
-
-                <button id="nextButton">
-                    JOGAR NOVAMENTE
-                </button>
-            </div>
-
         </section>
 
-        <footer class="controls">
-            <span>← →</span>
-            <span>ou</span>
-            <span>A D</span>
-            <span>para mover</span>
+        <footer class="game-footer">
+            <p><span class="online-dot"></span> ARENA ONLINE</p>
+            <div class="power-legend" aria-label="Legenda dos poderes">
+                <span><i class="power-wide">↔</i> Barra larga</span><span><i class="power-multi">●</i> Multibola</span>
+                <span><i class="power-slow">◇</i> Câmera lenta</span><span><i class="power-life">+</i> Vida extra</span>
+            </div>
+            <p class="footer-hint">MOUSE · TOQUE · TECLADO</p>
         </footer>
-
     </main>
 
+    <div class="sr-only" id="announcer" aria-live="assertive"></div>
     <script src="script.js"></script>
-
 </body>
 </html>
