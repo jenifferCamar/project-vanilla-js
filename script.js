@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function saveBestScore() {
         try { localStorage.setItem("pong-blocks-best", String(bestScore)); }
-        catch { /* O jogo continua normalmente quando o armazenamento está indisponível. */ }
+        catch {}
     }
 
     function fitCanvas() {

@@ -333,7 +333,7 @@ kbd { min-width: 21px; display: inline-block; padding: 3px 5px; color: #77688c; 
 
 .game-footer { min-height: 54px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; padding: 11px 8px 0; color: #988ba8; font-size: 8px; font-weight: 900; letter-spacing: 1.3px; }
 .game-footer > p:last-child { text-align: right; }
-.online-dot { width: 7px; height: 7px; display: inline-block; margin-right: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px rgba(115,224,193,.18); }
+.status-dot { width: 7px; height: 7px; display: inline-block; margin-right: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px rgba(115,224,193,.18); }
 .power-legend { display: flex; gap: 15px; }
 .power-legend span { display: inline-flex; align-items: center; gap: 6px; color: #8d7fa0; letter-spacing: .1px; font-weight: 800; text-transform: none; }
 .power-legend i { width: 22px; height: 22px; display: grid; place-items: center; border: 2px solid white; border-radius: 8px; box-shadow: 0 4px 9px rgba(94,69,127,.09); font-style: normal; font-size: 10px; }
