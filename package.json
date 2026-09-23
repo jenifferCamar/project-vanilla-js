@@ -2,5 +2,9 @@
   "name": "pong-blocks",
   "version": "2.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "check": "node --check script.js",
+    "dev": "npx --yes serve ."
+  }
 }
