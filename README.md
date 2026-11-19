@@ -6,7 +6,7 @@ Pong Blocks é um jogo de quebra-blocos desenvolvido como uma aplicação web em
 
 Acesse a versão publicada na Vercel:
 
-**[Jogar Pong Blocks](https://pong-blocks.vercel.app)**
+**[Jogar Pong Blocks](https://project-vanilla-js-black.vercel.app)**
 
 O repositório está conectado ao GitHub:
 
